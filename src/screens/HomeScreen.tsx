@@ -7,7 +7,7 @@ import { useStore } from '../context/StoreContext';
 import { categories, money, products } from '../data/products';
 import { colors as c, fonts as f } from '../theme/tokens';
 
-const stages = ['TODOS', 'STAGE 1', 'STAGE 2+', 'TRACK DAY'];
+const stages = ['TODOS', 'STAGE 1', 'STAGE 2+', 'STAGE 3', 'TRACK DAY'];
 export default function HomeScreen({ catalog = false }: { catalog?: boolean }) {
   const params = useLocalSearchParams<{ category?: string }>();
   const [query, setQuery] = useState('');
@@ -42,8 +42,10 @@ export default function HomeScreen({ catalog = false }: { catalog?: boolean }) {
       <View style={s.sectionHeading}><View style={[s.marker, { backgroundColor: '#ffb95f' }]} /><Text style={s.sectionTitle}>{catalog ? 'Catálogo de Performance' : 'Destaques de Performance'}</Text><Text style={s.micro}>TELEMETRY REF:{'\n'}04/24</Text></View>
       {activeCategory !== '' && <Pressable accessibilityRole="button" onPress={clear} style={s.selectedFilter}><Text style={s.link}>{activeCategory} · Limpar filtro</Text><StoreIcon name="close" size={16} /></Pressable>}
       <View style={s.grid}>{filtered.map(product => <View key={product.id} style={s.card}>
+        <Pressable accessibilityRole="button" accessibilityLabel={`Ver detalhes de ${product.name}`} onPress={() => router.push({ pathname: '/product/[id]', params: { id: product.id } })}>
         <View style={s.media}><Image source={product.image} accessibilityLabel={product.name} style={s.productImage} resizeMode="contain" /><View style={[s.productBadge, { backgroundColor: product.tone }]}><Text style={[s.productBadgeText, { color: product.tone === '#e29100' || product.tone === '#00a6e0' ? '#071716' : c.text }]}>{product.badge}</Text></View></View>
         <Text style={s.sku}>SKU: {product.id}</Text><Text numberOfLines={2} style={s.productName}>{product.name}</Text><View style={s.fit}><StoreIcon name="check-circle-outline" color="#7bd0ff" size={12} /><Text numberOfLines={1} style={s.fitText}>{product.fit}</Text></View>
+        </Pressable>
         <View style={s.priceRow}><View style={s.priceColumn}><Text style={[s.priceLabel, product.oldPrice ? s.oldPrice : undefined]}>{product.oldPrice ? money(product.oldPrice) : 'À VISTA'}</Text><Text adjustsFontSizeToFit numberOfLines={1} style={s.price}>{money(product.price)}</Text></View><Pressable accessibilityRole="button" accessibilityLabel={`Adicionar ${product.name} ao carrinho`} onPress={() => add(product.id)} style={({ pressed }) => [s.add, pressed && s.pressed]}><StoreIcon name={cart[product.id] ? 'cart-check' : 'cart-plus'} size={21} />{cart[product.id] > 0 && <Text style={s.quantity}>{cart[product.id]}</Text>}</Pressable></View>
       </View>)}</View>
       {filtered.length === 0 && <View style={s.empty}><StoreIcon name="magnify" size={32} /><Text style={s.sectionTitle}>Nenhuma peça encontrada</Text><Text style={s.body}>Experimente outra busca ou categoria.</Text><Pressable accessibilityRole="button" onPress={clear} style={s.smallAction}><Text style={s.link}>Limpar filtros</Text></Pressable></View>}

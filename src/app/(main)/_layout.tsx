@@ -1,7 +1,7 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { Tabs } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { StoreProvider, useStore } from '../../context/StoreContext';
+import { useStore } from '../../context/StoreContext';
 import { colors, fonts } from '../../theme/tokens';
 function Navigation() {
   const { count } = useStore();
@@ -10,4 +10,4 @@ function Navigation() {
     {([{ name: 'home', title: 'INÍCIO', icon: 'home-outline' }, { name: 'catalog', title: 'CATÁLOGO', icon: 'tools' }, { name: 'cart', title: 'CARRINHO', icon: 'cart-outline' }, { name: 'orders', title: 'PEDIDOS', icon: 'receipt-text-outline' }, { name: 'account', title: 'CONTA', icon: 'garage-variant' }] as const).map(tab => <Tabs.Screen key={tab.name} name={tab.name} options={{ title: tab.title, tabBarBadge: tab.name === 'cart' && count ? count : undefined, tabBarIcon: ({ color }) => <MaterialCommunityIcons name={tab.icon} size={23} color={color} /> }} />)}
   </Tabs>;
 }
-export default function MainLayout() { return <StoreProvider><Navigation /></StoreProvider>; }
+export default function MainLayout() { return <Navigation />; }
