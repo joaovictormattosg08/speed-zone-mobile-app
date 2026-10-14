@@ -1,4 +1,5 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import { router } from 'expo-router';
 import { ComponentProps, useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -29,6 +30,8 @@ export default function AuthScreen() {
   function changeMode(next: Mode) { setMode(next); setMessage(''); setPassword(''); setConfirmation(''); }
   function notice(text: string, error = false) { setIsError(error); setMessage(text); }
   function submit() {
+    // Temporary preview access: replace with the real session flow when auth is connected.
+    if (mode === 'login') { router.replace('/(main)/home'); return; }
     if (register && (!name.trim() || !surname.trim())) return notice('Preencha seu nome e sobrenome para continuar.', true);
     if (!validEmail(email)) return notice('Informe um e-mail válido para continuar.', true);
     if (!recovery && password.length < 8) return notice('Sua senha deve ter pelo menos 8 caracteres.', true);
