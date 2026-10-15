@@ -1,5 +1,5 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import { router } from 'expo-router';
+import { useAuth } from '../context/AuthContext';
 import { ComponentProps, useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -15,6 +15,8 @@ function Icon({ name, size = 20, color = colors.primary }: { name: IconName; siz
 }
 
 export default function AuthScreen() {
+  const { authenticate } = useAuth();
+  const [busy, setBusy] = useState(false);
   const [mode, setMode] = useState<Mode>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -29,14 +31,17 @@ export default function AuthScreen() {
 
   function changeMode(next: Mode) { setMode(next); setMessage(''); setPassword(''); setConfirmation(''); }
   function notice(text: string, error = false) { setIsError(error); setMessage(text); }
-  function submit() {
-    // Temporary preview access: replace with the real session flow when auth is connected.
-    if (mode === 'login') { router.replace('/(main)/home'); return; }
+  async function submit() {
+    if (busy) return;
     if (register && (!name.trim() || !surname.trim())) return notice('Preencha seu nome e sobrenome para continuar.', true);
     if (!validEmail(email)) return notice('Informe um e-mail válido para continuar.', true);
-    if (!recovery && password.length < 8) return notice('Sua senha deve ter pelo menos 8 caracteres.', true);
+    if (recovery) return notice('A recuperação por e-mail ainda não está disponível nesta versão local. Nenhum e-mail foi enviado.');
+    if (password.length < 8 || password.length > 128) return notice('Sua senha deve ter entre 8 e 128 caracteres.', true);
     if (register && password !== confirmation) return notice('As senhas precisam ser iguais.', true);
-    notice(recovery ? 'A recuperação de senha estará disponível em breve. Nenhum e-mail foi enviado.' : register ? 'Cadastro disponível em breve. Nenhuma conta foi criada.' : 'Sua garagem está quase pronta. O acesso à conta estará disponível em breve.');
+    setBusy(true); setMessage('');
+    try { await authenticate(register ? 'register' : 'login', { email: email.trim(), password, name: name.trim(), surname: surname.trim(), remember }); }
+    catch (error) { notice((error as Error).message, true); }
+    finally { setBusy(false); }
   }
 
   return <SafeAreaView style={s.safe}>
@@ -50,7 +55,7 @@ export default function AuthScreen() {
           </View>
 
           <View style={s.tabs} accessibilityRole="tablist">
-            {([{ key: 'login', label: 'Entrar', icon: 'key-outline' }, { key: 'register', label: 'Novo Piloto', icon: 'badge-account-outline' }] as const).map(tab => <Pressable key={tab.key} accessibilityRole="tab" accessibilityState={{ selected: register ? tab.key === 'register' : tab.key === 'login' }} onPress={() => changeMode(tab.key)} style={({ pressed }) => [s.tab, (register ? tab.key === 'register' : tab.key === 'login') && s.activeTab, pressed && s.pressed]}><Icon name={tab.icon} color={(register ? tab.key === 'register' : tab.key === 'login') ? colors.primary : colors.muted} /><Text style={[s.tabText, (register ? tab.key === 'register' : tab.key === 'login') && s.green]}>{tab.label}</Text></Pressable>)}
+            {([{ key: 'login', label: 'Entrar', icon: 'key-outline' }, { key: 'register', label: 'Novo Piloto', icon: 'badge-account-outline' }] as const).map(tab => <Pressable key={tab.key} accessibilityRole="tab" accessibilityState={{ selected: register ? tab.key === 'register' : tab.key === 'login' }} disabled={busy} onPress={() => changeMode(tab.key)} style={({ pressed }) => [s.tab, (register ? tab.key === 'register' : tab.key === 'login') && s.activeTab, pressed && s.pressed]}><Icon name={tab.icon} color={(register ? tab.key === 'register' : tab.key === 'login') ? colors.primary : colors.muted} /><Text style={[s.tabText, (register ? tab.key === 'register' : tab.key === 'login') && s.green]}>{tab.label}</Text></Pressable>)}
           </View>
 
           <View style={s.panel}>
@@ -61,7 +66,7 @@ export default function AuthScreen() {
             {!recovery && <AuthField label={register ? 'Criar Senha' : 'Senha de Acesso'} hint="8+ CARACTERES" icon="lock-outline" placeholder="••••••••••••" value={password} onChangeText={setPassword} password autoCapitalize="none" autoCorrect={false} autoComplete={register ? 'new-password' : 'current-password'} returnKeyType="go" onSubmitEditing={submit} />}
             {register && <AuthField label="Confirmar Senha" icon="shield-check-outline" placeholder="Repita sua senha" value={confirmation} onChangeText={setConfirmation} password autoCapitalize="none" autoCorrect={false} autoComplete="new-password" onSubmitEditing={submit} />}
             {!register && !recovery && <View style={s.utilities}><Pressable accessibilityRole="checkbox" accessibilityState={{ checked: remember }} accessibilityLabel="Lembrar dispositivo" onPress={() => setRemember(!remember)} style={s.remember}><View style={[s.checkbox, remember && s.checked]}>{remember && <Icon name="check-bold" size={15} color={colors.onPrimary} />}</View><Text style={s.utilityText}>Lembrar dispositivo</Text></Pressable><Pressable accessibilityRole="button" onPress={() => changeMode('recovery')} style={s.forgot}><Text style={s.link}>Esqueceu a chave?</Text></Pressable></View>}
-            <Pressable accessibilityRole="button" onPress={submit} style={({ pressed }) => [s.primaryButton, pressed && s.pressed]}><Icon name={recovery ? 'email-fast-outline' : register ? 'account-plus-outline' : 'power'} size={22} color={colors.onPrimary} /><Text style={s.primaryText}>{recovery ? 'Recuperar minha chave' : register ? 'Criar Minha Conta de Piloto' : 'Acessar Garagem SpeedZone'}</Text><Icon name="arrow-right" size={20} color={colors.onPrimary} /></Pressable>
+            <Pressable accessibilityRole="button" accessibilityState={{ busy, disabled: busy }} disabled={busy} onPress={submit} style={({ pressed }) => [s.primaryButton, pressed && s.pressed]}><Icon name={recovery ? 'email-fast-outline' : register ? 'account-plus-outline' : 'power'} size={22} color={colors.onPrimary} /><Text style={s.primaryText}>{busy ? 'Conectando...' : recovery ? 'Recuperar minha chave' : register ? 'Criar Minha Conta de Piloto' : 'Acessar Garagem SpeedZone'}</Text><Icon name="arrow-right" size={20} color={colors.onPrimary} /></Pressable>
             {message !== '' && <View accessibilityLiveRegion="polite" style={s.notice}><Icon name={isError ? 'alert-circle-outline' : 'information-outline'} color={isError ? colors.error : colors.primary} size={18} /><Text style={[s.noticeText, isError && { color: colors.error }]}>{message}</Text></View>}
             {recovery && <Pressable accessibilityRole="button" onPress={() => changeMode('login')} style={s.back}><Text style={s.link}>Voltar para entrar</Text></Pressable>}
           </View>

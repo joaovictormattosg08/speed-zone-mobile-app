@@ -1,3 +1,4 @@
+import { PilotAvatar } from '../components/PilotAvatar';
 import { ComponentProps, PropsWithChildren, useEffect, useState } from 'react';
 import { Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, Share, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -74,7 +75,7 @@ export default function ProductScreen({ id }: { id: string }) {
       <Pressable accessibilityRole="button" accessibilityLabel="Voltar" onPress={back} style={s.iconButton}><StoreIcon name="arrow-left" color={c.text} /></Pressable>
       <View style={s.brand}><StoreIcon name="speedometer" size={20} /><View><Text style={s.brandName}>SPEED<Text style={{ color: c.primary }}>ZONE</Text></Text><Text style={s.brandCaption}>A U T O P A R T S</Text></View></View>
       <Text numberOfLines={1} style={s.headerTitle}>DETALHES DA PEÇA</Text>
-      <Pressable accessibilityRole="button" accessibilityLabel="Minha conta" onPress={() => router.navigate('/(main)/account')} style={s.iconButton}><Image source={require('../../assets/store/avatar.png')} style={s.avatar} /></Pressable>
+      <Pressable accessibilityRole="button" accessibilityLabel="Minha conta" onPress={() => router.navigate('/(main)/account')} style={s.iconButton}><PilotAvatar /></Pressable>
     </View>
     <KeyboardAvoidingView style={s.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={s.scroll}>

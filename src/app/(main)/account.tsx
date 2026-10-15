@@ -1,2 +1,1 @@
-import StoreSecondaryScreen from '../../screens/StoreSecondaryScreen';
-export default function Screen() { return <StoreSecondaryScreen page="account" />; }
+export { default } from '../../screens/PilotScreen';
