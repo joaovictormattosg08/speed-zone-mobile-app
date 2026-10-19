@@ -29,11 +29,33 @@ Abra o endereço mostrado pelo Expo (normalmente http://localhost:8081). Selecio
 
 ## Testar em um celular
 
+### Emulador Android no mesmo PC
+
+Para o Android Emulator, adicione `EXPO_PUBLIC_ANDROID_API_URL=http://10.0.2.2:3001` ao `.env.local`. Esse endereço acessa o computador hospedeiro pela rede virtual do emulador, sem alterar o endereço usado na web. Recarregue completamente o app após a alteração. Para voltar a usar um Android físico, remova essa variável ou defina nela o IP de rede do PC.
+
+### Aparelho físico
+
+O comando `npm run api` também lê `.env.local` (arquivo local ignorado pelo Git). Para acessar pelo celular, configure nesse arquivo:
+
+```dotenv
+EXPO_PUBLIC_API_URL=http://IP-DO-PC:3001
+HOST=0.0.0.0
+API_ALLOWED_ORIGINS=http://IP-DO-PC:8081
+```
+
+Substitua `IP-DO-PC` pelo IPv4 atual da conexão de rede. Reinicie a API e recarregue completamente o aplicativo no Expo Go após mudar o endereço. No navegador do celular, abra `http://IP-DO-PC:3001/health`: deve aparecer `{"ok":true}`. Se não abrir, confira a rede, isolamento entre dispositivos e a permissão do Node.js no firewall do Windows. O túnel do Expo não encaminha a API da porta 3001.
+
 No PC, defina `HOST=0.0.0.0` para a API e `EXPO_PUBLIC_API_URL=http://IP-DO-PC:3001` para o Expo. Os dois dispositivos devem acessar a mesma rede e a porta deve estar liberada. O endereço padrão `127.0.0.1` funciona apenas no próprio computador. Para builds nativos, gere uma development build com os plugins de SecureStore e ImagePicker.
 
 Antes de publicar, hospede a API com HTTPS, configure `COOKIE_SECURE=true`, origens explícitas em `API_ALLOWED_ORIGINS` e políticas de privacidade/recuperação adequadas. Não exponha o banco local diretamente.
 
 ## Verificação
+
+A aba **Pedidos** mostra as simulações concluídas no carrinho, persistidas por conta no SQLite. Os valores são recalculados pela API a partir do catálogo de demonstração de `server/orders.mjs`; mantenha esse catálogo alinhado aos produtos do app durante esta fase. O identificador da finalização evita duplicações ao repetir uma tentativa. Não há cobrança, emissão de nota fiscal ou rastreamento real. **Ver demonstração** exibe exemplos de entrega/cancelamento apenas na interface, sem gravá-los na conta. A busca aceita código, SKU e nome da peça, com filtros por status e ordenação por data.
+
+Após alterações no código da API, reinicie o terminal de `npm run api` para carregar as novas rotas.
+
+No carrinho, **Calcular Frete e Prazo** aceita um CEP de 8 dígitos e oferece entrega Econômica ou Express. Esta é uma simulação local por faixa de CEP, sem consulta da existência do endereço ou cotação de transportadora. O total atualiza com a escolha; mudar o CEP exige nova seleção. A API exige a entrega e recalcula o preço, ignorando valores enviados pelo cliente. A modalidade, CEP, prazo ilustrativo e valor são salvos no pedido. A gratuidade a partir de R$ 6.500 considera o subtotal antes dos descontos.
 
 ```powershell
 npm run test:api

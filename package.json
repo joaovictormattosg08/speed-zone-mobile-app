@@ -34,7 +34,7 @@
     "web": "expo start --web",
     "lint": "expo lint",
     "typecheck": "tsc --noEmit",
-    "api": "node server/index.mjs",
+    "api": "node --env-file-if-exists=.env.local server/index.mjs",
     "test:api": "node --test server/auth.test.mjs"
   },
   "private": true
