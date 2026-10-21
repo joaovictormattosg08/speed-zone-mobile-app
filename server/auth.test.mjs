@@ -40,6 +40,13 @@ test('accounts, sessions, profile isolation and persistence', async () => {
     const otherLogin = await call('/auth/login', 'POST', { ...account, email: 'other@example.com' });
     const otherProfile = await call('/me', 'GET', undefined, otherLogin.data.token);
     assert.equal(otherProfile.data.user.photo, null); assert.equal(otherProfile.data.user.cars.length, 0);
+    const deliveryAddress = { recipient: 'Ana Maria', phone: '11987654321', cep: '01310100', street: 'Avenida Paulista', number: '100', complement: 'Apto 42', district: 'Bela Vista', city: 'São Paulo', state: 'SP', reference: 'Portaria' };
+    const savedAddress = await call('/me', 'PATCH', { deliveryAddress }, token);
+    assert.equal(savedAddress.status, 200); assert.deepEqual(savedAddress.data.user.deliveryAddress, deliveryAddress);
+    assert.ok(savedAddress.data.user.address.includes('Avenida Paulista, 100'));
+    assert.equal((await call('/me', 'PATCH', { deliveryAddress: { ...deliveryAddress, number: '' } }, token)).status, 400);
+    assert.equal((await call('/me', 'PATCH', { deliveryAddress: { ...deliveryAddress, state: 'XX' } }, token)).status, 400);
+    assert.equal((await call('/me', 'GET', undefined, otherLogin.data.token)).data.user.deliveryAddress, undefined);
     const purchase = { checkout: { recipient: 'Ana Maria', address: 'Rua do Projeto, 42, Centro, São Paulo SP', instructions: 'Entregar na portaria', payment: 'card' }, requestKey: 'checkout-test-123', delivery: { cep: '01310100', service: 'express' }, items: [{ id: 'SZ-TUR-042', quantity: 1 }, { id: 'SZ-ELT-220', quantity: 1 }, { id: 'SZ-ACC-015', quantity: 2 }], coupon: 'PROJETO10', total: 1 };
     assert.equal((await call('/orders', 'POST', purchase)).status, 401);
     const placed = await call('/orders', 'POST', purchase, token);
@@ -79,6 +86,7 @@ test('accounts, sessions, profile isolation and persistence', async () => {
     assert.equal((await call('/support/tickets/' + ticketId, 'PATCH', { text: 'nova mensagem', requestKey: 'closed-message-123' }, token)).status, 400);
     assert.equal((await call('/support/tickets/' + ticketId, 'PATCH', { status: 'open' }, token)).data.ticket.status, 'open');
     await close(); server = createApi({ database }); await listen();
+    assert.deepEqual((await call('/me', 'GET', undefined, token)).data.user.deliveryAddress, deliveryAddress);
     assert.equal((await call('/orders', 'GET', undefined, token)).data.orders.some(order => order.id === placed.data.order.id), true);
     const restoredTicket = await call('/support/tickets/' + ticketId, 'GET', undefined, token);
     assert.equal(restoredTicket.data.ticket.messages.length, 1); assert.equal(restoredTicket.data.ticket.attachment, photo);

@@ -1,3 +1,4 @@
+import { ownCoupon, consumeCoupon, creditOrder } from './loyalty.mjs';
 import { randomUUID } from 'node:crypto';
 import { calculateCart, shippingOptions } from '../src/utils/cartPricing.ts';
 // Local demonstration catalog; production checkout requires the inventory service.
@@ -33,7 +34,8 @@ export function placeOrder(db, user, body) {
   const subtotal = items.reduce((sum, item) => sum + Math.round(item.price * 100) * item.quantity, 0);
   const delivery = shippingOptions(body.delivery.cep, subtotal).find(option => option.service === body.delivery.service);
   if (!delivery) invalid('CEP inválido para simular o frete.');
-  const totals = calculateCart(items, body.coupon || null, delivery);
+  const reward = ownCoupon(db, user.id, body.coupon);
+  const totals = calculateCart(items, body.coupon || null, delivery, reward);
   if (body.coupon && !totals.validCoupon) invalid('O cupom não é válido para este pedido.');
   let checkout;
   if (body.checkout !== undefined) {
@@ -43,7 +45,14 @@ export function placeOrder(db, user, body) {
   }
   const id = `SZ-${randomUUID().slice(0, 8).toUpperCase()}`;
   const profile = JSON.parse(user.profile);
-  const order = { checkout, recipient: checkout?.recipient || `${profile.name} ${profile.surname}`, id, createdAt: new Date().toISOString(), status: 'processing', demo: true, items, delivery, subtotal: totals.subtotal, discount: totals.discount, shipping: totals.shipping, total: totals.total, coupon: totals.validCoupon, address: checkout?.address || profile.address || '', tracking: null };
-  db.prepare('INSERT INTO orders VALUES (?, ?, ?, ?, ?)').run(id, user.id, body.requestKey, order.createdAt, JSON.stringify(order));
+  const order = { deliveryAddress: profile.deliveryAddress?.cep === delivery.cep ? profile.deliveryAddress : undefined, checkout, recipient: checkout?.recipient || `${profile.name} ${profile.surname}`, id, createdAt: new Date().toISOString(), status: 'processing', demo: true, items, delivery, subtotal: totals.subtotal, discount: totals.discount, shipping: totals.shipping, total: totals.total, coupon: totals.validCoupon, address: checkout?.address || profile.address || '', tracking: null };
+  db.exec('BEGIN IMMEDIATE');
+  try {
+    if (reward) consumeCoupon(db, user.id, reward.code, id);
+    order.pointsEarned = creditOrder(db, user.id, order);
+    order.delivery = { ...delivery, price: totals.shipping };
+    db.prepare('INSERT INTO orders VALUES (?, ?, ?, ?, ?)').run(id, user.id, body.requestKey, order.createdAt, JSON.stringify(order));
+    db.exec('COMMIT');
+  } catch (error) { db.exec('ROLLBACK'); throw error; }
   return order;
 }

@@ -1,3 +1,5 @@
+import { Loyalty, LoyaltyCoupon } from '../data/loyalty';
+import { DeliveryAddress } from '../utils/address';
 import { SupportTicket, TicketDraft } from '../data/support';
 import { ShippingChoice } from '../utils/cartPricing';
 import { CheckoutDetails, Order } from '../data/orders';
@@ -6,9 +8,9 @@ import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 
 export type PilotCar = { id: string; model: string; engine: string; year: string; color: string; power: string; tune: string; exhaust: string; ignition: string };
-export type Pilot = { id: string; name: string; surname: string; email: string; phone: string; photo: string | null; cars: PilotCar[]; activeCarId: string | null; address: string };
+export type Pilot = { deliveryAddress?: DeliveryAddress; id: string; name: string; surname: string; email: string; phone: string; photo: string | null; cars: PilotCar[]; activeCarId: string | null; address: string };
 type Credentials = { email: string; password: string; remember: boolean; name?: string; surname?: string };
-type Auth = { listTickets: () => Promise<SupportTicket[]>; getTicket: (id: string) => Promise<SupportTicket>; createTicket: (draft: TicketDraft, requestKey: string) => Promise<SupportTicket>; updateTicket: (id: string, values: { text?: string; requestKey?: string; status?: 'open' | 'closed' }) => Promise<SupportTicket>; listOrders: () => Promise<Order[]>; placeOrder: (items: { id: string; quantity: number }[], coupon: string | null, requestKey: string, delivery: ShippingChoice, checkout?: CheckoutDetails) => Promise<Order>; user: Pilot | null; loading: boolean; startupError: string; retry: () => Promise<void>; authenticate: (mode: 'login' | 'register', values: Credentials) => Promise<void>; update: (values: Partial<Omit<Pilot, 'id'>>) => Promise<void>; logout: () => Promise<void> };
+type Auth = { getLoyalty: () => Promise<Loyalty>; redeemReward: (rewardId: string, requestKey: string) => Promise<LoyaltyCoupon>; listTickets: () => Promise<SupportTicket[]>; getTicket: (id: string) => Promise<SupportTicket>; createTicket: (draft: TicketDraft, requestKey: string) => Promise<SupportTicket>; updateTicket: (id: string, values: { text?: string; requestKey?: string; status?: 'open' | 'closed' }) => Promise<SupportTicket>; listOrders: () => Promise<Order[]>; placeOrder: (items: { id: string; quantity: number }[], coupon: string | null, requestKey: string, delivery: ShippingChoice, checkout?: CheckoutDetails) => Promise<Order>; user: Pilot | null; loading: boolean; startupError: string; retry: () => Promise<void>; authenticate: (mode: 'login' | 'register', values: Credentials) => Promise<void>; update: (values: Partial<Omit<Pilot, 'id'>>) => Promise<void>; logout: () => Promise<void> };
 const Context = createContext<Auth | null>(null);
 const key = 'speedzone.session';
 const api = (Platform.OS === 'android' ? process.env.EXPO_PUBLIC_ANDROID_API_URL : undefined)
@@ -46,7 +48,17 @@ export function AuthProvider({ children }: PropsWithChildren) {
     if (Platform.OS !== 'web') { token.current = data.token; if (values.remember) await SecureStore.setItemAsync(key, data.token); else await SecureStore.deleteItemAsync(key); }
     setUser(data.user);
   };
-  const update: Auth['update'] = async values => { const data = await request('/me', 'PATCH', values); setUser(data.user); };
+  const update: Auth['update'] = async values => {
+    const data = await request('/me', 'PATCH', values);
+    if (values.deliveryAddress) {
+      const saved = data.user?.deliveryAddress;
+      const confirmed = saved && Object.entries(values.deliveryAddress).every(([key, value]) => saved[key] === value.trim());
+      if (!confirmed) throw new Error('O servidor não confirmou o endereço. Reinicie a API com Ctrl+C e npm run api, depois toque em Salvar novamente. Seus campos continuam preenchidos.');
+    }
+    setUser(data.user);
+  };
+  const getLoyalty = useCallback(async (): Promise<Loyalty> => request('/loyalty'), [request]);
+  const redeemReward = async (rewardId: string, requestKey: string): Promise<LoyaltyCoupon> => (await request('/loyalty/redeem', 'POST', { rewardId, requestKey })).coupon;
   const listOrders = useCallback(async (): Promise<Order[]> => (await request('/orders')).orders, [request]);
   const placeOrder = async (items: { id: string; quantity: number }[], coupon: string | null, requestKey: string, delivery: ShippingChoice, checkout?: CheckoutDetails): Promise<Order> => (await request('/orders', 'POST', { items, coupon, requestKey, delivery, checkout })).order;
   const listTickets = useCallback(async (): Promise<SupportTicket[]> => (await request('/support/tickets')).tickets, [request]);
@@ -54,6 +66,6 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const createTicket = async (draft: TicketDraft, requestKey: string): Promise<SupportTicket> => (await request('/support/tickets', 'POST', { ...draft, requestKey })).ticket;
   const updateTicket = async (id: string, values: { text?: string; requestKey?: string; status?: 'open' | 'closed' }): Promise<SupportTicket> => (await request('/support/tickets/' + encodeURIComponent(id), 'PATCH', values)).ticket;
   const logout = async () => { await request('/auth/logout', 'POST', {}); if (Platform.OS !== 'web') await SecureStore.deleteItemAsync(key); token.current = null; setUser(null); };
-  return <Context.Provider value={{ listTickets, getTicket, createTicket, updateTicket, listOrders, placeOrder, user, loading, startupError, retry, authenticate, update, logout }}>{children}</Context.Provider>;
+  return <Context.Provider value={{ getLoyalty, redeemReward, listTickets, getTicket, createTicket, updateTicket, listOrders, placeOrder, user, loading, startupError, retry, authenticate, update, logout }}>{children}</Context.Provider>;
 }
 export function useAuth() { const context = useContext(Context); if (!context) throw new Error('AuthProvider is required'); return context; }

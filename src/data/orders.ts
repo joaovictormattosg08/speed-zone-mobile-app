@@ -1,8 +1,9 @@
+import { DeliveryAddress } from '../utils/address';
 import { ShippingOption } from '../utils/cartPricing';
 import { products } from './products';
 export type OrderStatus = 'processing' | 'transit' | 'delivered' | 'cancelled';
 export type CheckoutDetails = { recipient: string; address: string; instructions: string; payment: 'pix' | 'card' };
-export type Order = { checkout?: CheckoutDetails; recipient?: string; delivery?: ShippingOption; id: string; createdAt: string; status: OrderStatus; demo: boolean; items: { id: string; name: string; price: number; quantity: number }[]; subtotal: number; discount: number; shipping: number; total: number; coupon: string | null; address: string; tracking: string | null };
+export type Order = { pointsEarned?: number; deliveryAddress?: DeliveryAddress; checkout?: CheckoutDetails; recipient?: string; delivery?: ShippingOption; id: string; createdAt: string; status: OrderStatus; demo: boolean; items: { id: string; name: string; price: number; quantity: number }[]; subtotal: number; discount: number; shipping: number; total: number; coupon: string | null; address: string; tracking: string | null };
 export const statusLabels: Record<OrderStatus, string> = { processing: 'Em preparação', transit: 'Em rota', delivered: 'Entregue', cancelled: 'Cancelado' };
 const line = (id: string, quantity = 1) => { const product = products.find(p => p.id === id)!; return { id, name: product.name, price: product.price, quantity }; };
 const example = (id: string, status: OrderStatus, date: string, items: Order['items'], discount = 0, shipping = 0): Order => {

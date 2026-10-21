@@ -35,7 +35,7 @@
     "lint": "expo lint",
     "typecheck": "tsc --noEmit",
     "api": "node --env-file-if-exists=.env.local server/index.mjs",
-    "test:api": "node --test server/auth.test.mjs"
+    "test:api": "node --test server/auth.test.mjs server/loyalty.test.mjs"
   },
   "private": true
 }

@@ -1,3 +1,4 @@
+import { useAuth } from '../context/AuthContext';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { ShippingChoice, shippingOptions } from '../utils/cartPricing';
@@ -5,9 +6,11 @@ import { StoreIcon } from './StoreHeader';
 import { money } from '../data/products';
 import { colors as c, fonts as f } from '../theme/tokens';
 
-export function CartShipping({ subtotal, selected, onSelect }: { subtotal: number; selected: ShippingChoice | null; onSelect: (value: ShippingChoice | null) => void }) {
-  const [cep, setCep] = useState(selected?.cep || '');
-  const [calculated, setCalculated] = useState(selected?.cep || '');
+export function CartShipping({ subtotal, selected, onSelect, lockedCep }: { lockedCep?: string; subtotal: number; selected: ShippingChoice | null; onSelect: (value: ShippingChoice | null) => void }) {
+  const { user } = useAuth();
+  const initialCep = lockedCep || selected?.cep || user?.deliveryAddress?.cep || '';
+  const [cep, setCep] = useState(initialCep);
+  const [calculated, setCalculated] = useState(initialCep);
   const [error, setError] = useState('');
   const options = shippingOptions(calculated, subtotal);
   function calculate() {
@@ -17,7 +20,7 @@ export function CartShipping({ subtotal, selected, onSelect }: { subtotal: numbe
   return <View style={s.panel}>
     <View style={s.heading}><StoreIcon name="truck-delivery-outline" size={22} /><Text style={s.title}>Calcular Frete e Prazo</Text><Text style={s.badge}>SIMULAÇÃO</Text></View>
     <Text style={s.body}>Informe seu CEP e escolha como receber as peças.</Text>
-    <View style={s.row}><TextInput accessibilityLabel="CEP para calcular frete" placeholder="00000-000" placeholderTextColor={c.subtle} value={cep.length > 5 ? `${cep.slice(0, 5)}-${cep.slice(5)}` : cep} onChangeText={value => { setCep(value.replace(/\D/g, '').slice(0, 8)); setCalculated(''); setError(''); onSelect(null); }} keyboardType="number-pad" maxLength={9} style={s.input} returnKeyType="done" onSubmitEditing={calculate} /><Pressable accessibilityRole="button" onPress={calculate} style={s.calculate}><Text style={s.calculateText}>CALCULAR</Text></Pressable></View>
+    <View style={s.row}><TextInput editable={!lockedCep} accessibilityLabel="CEP para calcular frete" placeholder="00000-000" placeholderTextColor={c.subtle} value={cep.length > 5 ? `${cep.slice(0, 5)}-${cep.slice(5)}` : cep} onChangeText={value => { setCep(value.replace(/\D/g, '').slice(0, 8)); setCalculated(''); setError(''); onSelect(null); }} keyboardType="number-pad" maxLength={9} style={s.input} returnKeyType="done" onSubmitEditing={calculate} /><Pressable accessibilityRole="button" onPress={calculate} style={s.calculate}><Text style={s.calculateText}>CALCULAR</Text></Pressable></View>
     {error !== '' && <Text accessibilityLiveRegion="polite" style={s.error}>{error}</Text>}
     {options.length > 0 && <><Text accessibilityLiveRegion="polite" style={s.body}>Opções para {calculated.slice(0, 5)}-{calculated.slice(5)}</Text><View accessibilityRole="radiogroup" accessibilityLabel="Opções de entrega" style={{ gap: 8 }}>{options.map(option => {
       const checked = selected?.service === option.service && selected.cep === option.cep;

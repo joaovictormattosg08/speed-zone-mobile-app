@@ -1,3 +1,5 @@
+import { setupLoyalty, getLoyalty, redeem } from './loyalty.mjs';
+import { addressError, formatAddress } from '../src/utils/address.ts';
 import { createServer } from 'node:http';
 import { DatabaseSync } from 'node:sqlite';
 import { randomBytes, randomUUID, scrypt, timingSafeEqual, createHash } from 'node:crypto';
@@ -27,6 +29,7 @@ export function createApi({ database = resolve('server/data/speedzone.sqlite') }
     CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, email TEXT UNIQUE NOT NULL, password TEXT NOT NULL, profile TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS sessions (hash TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id), expires INTEGER NOT NULL);`);
   setupOrders(db);
+  setupLoyalty(db);
   setupSupport(db);
   const attempts = new Map();
   const publicUser = row => ({ ...JSON.parse(row.profile), id: row.id, email: row.email });
@@ -87,6 +90,8 @@ export function createApi({ database = resolve('server/data/speedzone.sqlite') }
       const ticketId = path?.match(/^\/support\/tickets\/(TK-[A-F0-9]{8})$/)?.[1];
       if (ticketId && req.method === 'GET') return send({ ticket: getTicket(db, row.id, ticketId) });
       if (ticketId && req.method === 'PATCH') return send({ ticket: updateTicket(db, row.id, ticketId, body) });
+      if (path === '/loyalty' && req.method === 'GET') return send(getLoyalty(db, row.id));
+      if (path === '/loyalty/redeem' && req.method === 'POST') return send({ coupon: redeem(db, row.id, body) }, 201);
       if (path === '/orders' && req.method === 'GET') return send({ orders: listOrders(db, row.id) });
       if (path === '/orders' && req.method === 'POST') return send({ order: placeOrder(db, row, body) }, 201);
       if (path === '/auth/logout' && req.method === 'POST') { db.prepare('DELETE FROM sessions WHERE hash = ?').run(digest(token)); cookie(''); return send({ ok: true }); }
@@ -94,6 +99,13 @@ export function createApi({ database = resolve('server/data/speedzone.sqlite') }
       if (path === '/me' && req.method === 'PATCH') {
         const profile = JSON.parse(row.profile);
         for (const key of ['name', 'surname', 'phone', 'address']) if (key in body) profile[key] = field(body[key], key, ['name', 'surname'].includes(key) ? 1 : 0, key === 'address' ? 300 : 80);
+        if ('deliveryAddress' in body) {
+          const message = addressError(body.deliveryAddress);
+          if (message) fail(message);
+          const keys = ['recipient', 'phone', 'cep', 'street', 'number', 'complement', 'district', 'city', 'state', 'reference'];
+          profile.deliveryAddress = Object.fromEntries(keys.map(key => [key, body.deliveryAddress[key].trim()]));
+          profile.address = formatAddress(profile.deliveryAddress);
+        }
         if ('photo' in body) {
           if (body.photo !== null) {
             if (typeof body.photo !== 'string') fail('Foto inválida.');

@@ -80,3 +80,13 @@ Os testes de API usam um banco temporário, verificam cadastro, login, isolament
 ## Checkout e confirmação
 
 No carrinho, Finalizar Compra abre `/checkout`: destinatário e endereço, entrega por CEP, instruções opcionais, escolha de PIX/cartão e revisão. A forma de pagamento é apenas uma preferência para a simulação; não há cobrança ou coleta de dados bancários. O endereço é preservado no pedido, sem alterar o cadastro. Após salvar, `/order-confirmed/[id]` mostra os dados persistidos, código copiável, componentes, totais e atalhos para detalhes e suporte. Recarregar a confirmação consulta novamente os pedidos da conta. Reinicie a API após atualizar para salvar os novos campos.
+
+## Endereço e ViaCEP
+
+Conta → Endereço de Entrega abre `/address`, também acessível pelo checkout. O CEP consulta diretamente https://viacep.com.br para preencher rua, bairro, cidade e UF; número, complemento, destinatário, contato e referência são informados pelo piloto. Há tratamento de CEP inexistente, timeout e respostas antigas; os campos permitem preenchimento manual se o serviço estiver indisponível. O endereço estruturado é salvo na conta, reutilizado no checkout e preservado no pedido. Alterar o CEP exige nova seleção do frete, que continua sendo simulado. Endereços antigos em texto são exibidos para auxiliar a migração, sem tentar adivinhar seus campos.
+
+## SpeedPoints Club
+
+Conta → SpeedPoints Club permite consultar saldo, histórico, recompensas e cupons. Cada real inteiro em produtos após descontos (sem frete) gera 1 ponto. Nesta fase os pedidos e os pontos são demonstrativos. Pedidos antigos não cancelados são creditados uma única vez na inicialização da API. Resgates: 5.000/10.000/15.000/20.000 pontos por 5%/10%/15%/20%; 5.000 pontos por frete grátis.
+
+O resgate debita pontos e emite código aleatório exclusivo da conta, de uso único e sem validade nesta demonstração. Um cupom por compra, sem acumular com promoções. Carrinho → Ver cupons lista os disponíveis. Crédito, débito e consumo são protegidos por transações SQLite e identificadores idempotentes. O servidor recalcula valores e valida proprietário/disponibilidade; não confia no saldo ou desconto enviado pelo app. A futura integração de pagamentos reais deve creditar somente pagamentos confirmados e implementar estorno de pontos para cancelamentos/reembolsos antes de uso em produção.
