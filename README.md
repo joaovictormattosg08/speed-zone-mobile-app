@@ -49,13 +49,25 @@ No PC, defina `HOST=0.0.0.0` para a API e `EXPO_PUBLIC_API_URL=http://IP-DO-PC:3
 
 Antes de publicar, hospede a API com HTTPS, configure `COOKIE_SECURE=true`, origens explícitas em `API_ALLOWED_ORIGINS` e políticas de privacidade/recuperação adequadas. Não exponha o banco local diretamente.
 
-## Verificação
+## Central de Suporte
+
+O acesso principal fica em **Conta → Central de Suporte**, sem nova aba inferior. A tela oferece categoria, seleção de projeto, descrição de 20 a 4.000 caracteres e uma evidência PNG/JPEG/WebP de até 5 MB. Os chamados são salvos por conta no SQLite. A conversa permite complementar informações, encerrar e reabrir; anexos são carregados apenas ao abrir a conversa. Uma finalização repetida ou uma mensagem reenviada com o mesmo identificador não cria duplicatas.
+
+O botão de suporte nos detalhes de um pedido vincula esse pedido ao chamado. WhatsApp, chat ao vivo e respostas de preparadores ainda não estão integrados: nenhum conteúdo é enviado para terceiros e nenhum atendente ou prazo de resposta é simulado. As orientações de garantia não representam cobertura automaticamente contratada.
+
+Reinicie `npm run api` após atualizar o servidor para criar a tabela e habilitar as rotas `/support/tickets`.
+
+## Pedidos e frete
 
 A aba **Pedidos** mostra as simulações concluídas no carrinho, persistidas por conta no SQLite. Os valores são recalculados pela API a partir do catálogo de demonstração de `server/orders.mjs`; mantenha esse catálogo alinhado aos produtos do app durante esta fase. O identificador da finalização evita duplicações ao repetir uma tentativa. Não há cobrança, emissão de nota fiscal ou rastreamento real. **Ver demonstração** exibe exemplos de entrega/cancelamento apenas na interface, sem gravá-los na conta. A busca aceita código, SKU e nome da peça, com filtros por status e ordenação por data.
 
 Após alterações no código da API, reinicie o terminal de `npm run api` para carregar as novas rotas.
 
+**Ver Detalhes** e **Acompanhar** abrem `/order/[id]`, uma tela individual protegida por login. Ela consulta apenas os pedidos da conta ativa e exibe estado de erro ou pedido não encontrado quando necessário. Código compartilhável, histórico, endereço, itens e resumo financeiro usam o pedido selecionado. A prévia usa `?preview=1` e permanece identificada como ilustrativa; o mapa não contém localização ao vivo, o botão fiscal explica a integração ainda indisponível e o botão de suporte abre a Central de Suporte. Novos pedidos preservam também o nome do destinatário no momento da finalização.
+
 No carrinho, **Calcular Frete e Prazo** aceita um CEP de 8 dígitos e oferece entrega Econômica ou Express. Esta é uma simulação local por faixa de CEP, sem consulta da existência do endereço ou cotação de transportadora. O total atualiza com a escolha; mudar o CEP exige nova seleção. A API exige a entrega e recalcula o preço, ignorando valores enviados pelo cliente. A modalidade, CEP, prazo ilustrativo e valor são salvos no pedido. A gratuidade a partir de R$ 6.500 considera o subtotal antes dos descontos.
+
+## Verificação
 
 ```powershell
 npm run test:api
@@ -64,3 +76,7 @@ npx expo lint
 ```
 
 Os testes de API usam um banco temporário, verificam cadastro, login, isolamento entre contas, persistência da foto/garagem, validação e revogação de sessão.
+
+## Checkout e confirmação
+
+No carrinho, Finalizar Compra abre `/checkout`: destinatário e endereço, entrega por CEP, instruções opcionais, escolha de PIX/cartão e revisão. A forma de pagamento é apenas uma preferência para a simulação; não há cobrança ou coleta de dados bancários. O endereço é preservado no pedido, sem alterar o cadastro. Após salvar, `/order-confirmed/[id]` mostra os dados persistidos, código copiável, componentes, totais e atalhos para detalhes e suporte. Recarregar a confirmação consulta novamente os pedidos da conta. Reinicie a API após atualizar para salvar os novos campos.

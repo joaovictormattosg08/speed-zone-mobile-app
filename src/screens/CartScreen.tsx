@@ -1,6 +1,5 @@
 import { CartShipping } from '../components/CartShipping';
-import { useAuth } from '../context/AuthContext';
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { Image, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -13,16 +12,12 @@ import { colors as c, fonts as f } from '../theme/tokens';
 const format = (cents: number) => money(cents / 100);
 export default function CartScreen() {
   const { cart, add, remove, removeItem, count } = useStore();
-  const { placeOrder } = useAuth();
-  const [submitting, setSubmitting] = useState(false);
-  const [orderCode, setOrderCode] = useState('');
-  const pending = useRef<{ signature: string; key: string } | null>(null);
   const [delivery, setDelivery] = useState<ShippingChoice | null>(null);
   const [code, setCode] = useState('');
   const [coupon, setCoupon] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [previewEmpty, setPreviewEmpty] = useState(false);
-  const [sheet, setSheet] = useState<'coupons' | 'checkout' | 'done' | null>(null);
+  const [sheet, setSheet] = useState<'coupons' | null>(null);
   const items = products.filter(item => cart[item.id]).map(item => ({ ...item, quantity: cart[item.id] }));
   const totals = calculateCart(items, coupon, delivery);
   const selectedShipping = delivery ? shippingOptions(delivery.cep, totals.subtotal).find(option => option.service === delivery.service) : undefined;
@@ -40,23 +35,6 @@ export default function CartScreen() {
     if (count > 0) return;
     add('SZ-TUR-042'); add('SZ-ELT-220'); add('SZ-ACC-015', 2);
     setCoupon(null); setError(''); setPreviewEmpty(false);
-  }
-  async function checkout() {
-    if (submitting || !items.length) return;
-    if (!delivery) { setError('Calcule o frete e escolha uma opção de entrega.'); return; }
-    setSubmitting(true); setError('');
-    const lines = items.map(item => ({ id: item.id, quantity: item.quantity }));
-    const signature = JSON.stringify({ lines, coupon: totals.validCoupon, delivery });
-    // Generated only on the checkout press, then reused when retrying that request.
-    // eslint-disable-next-line react-hooks/purity
-    if (pending.current?.signature !== signature) pending.current = { signature, key: Date.now() + '-' + Math.random().toString(36).slice(2) };
-    try {
-      const order = await placeOrder(lines, totals.validCoupon, pending.current.key, delivery);
-      setOrderCode(order.id); setSheet('done');
-      for (const item of items) removeItem(item.id);
-      clearCoupon(); setDelivery(null); pending.current = null;
-    } catch (cause) { setError((cause as Error).message); }
-    finally { setSubmitting(false); }
   }
   const browse = () => router.navigate('/(main)/catalog');
   return <SafeAreaView edges={['top', 'left', 'right']} style={s.safe}>
@@ -78,14 +56,12 @@ export default function CartScreen() {
           <View style={s.examples}><Text style={s.micro}>Exemplos:</Text><Pressable accessibilityRole="button" onPress={() => apply('TURBO50')} style={s.exampleChip}><Text style={s.expired}>ⓘ TURBO50 (Expirado)</Text></Pressable><Pressable accessibilityRole="button" onPress={() => apply('GARAGEPASS')} style={s.exampleChip}><Text style={s.micro}>GARAGEPASS (Mín. R$ 7.000)</Text></Pressable></View></View>
           <CartShipping subtotal={totals.subtotal} selected={delivery} onSelect={value => { setDelivery(value); setError(''); }} />
           <View style={s.panel}><View style={s.summaryHeading}><Text style={s.summaryTitle}>Resumo do Pedido</Text><Text style={s.micro}>{items.length} {items.length === 1 ? 'Produto' : 'Produtos'}</Text></View><View style={s.summaryRow}><Text style={s.body}>Subtotal dos itens</Text><Text testID="cart-subtotal" style={s.amount}>{format(totals.subtotal)}</Text></View>{totals.validCoupon && <View style={s.summaryRow}><View style={s.summaryLabel}><StoreIcon name="tag-outline" size={16} /><Text style={s.discountLabel}>Cupom {totals.validCoupon} ({totals.validCoupon === 'PROJETO10' ? 10 : 15}%)</Text></View><Text testID="cart-discount" style={s.discountLabel}>- {format(totals.discount)}</Text></View>}<View style={s.summaryRow}><View style={s.summaryLabel}><StoreIcon name="truck-outline" size={16} color={c.muted} /><Text style={s.body}>{selectedShipping ? `${selectedShipping.label} (${selectedShipping.days})` : 'Frete • selecione a entrega'}</Text></View><Text testID="cart-shipping" style={s.amount}>{!selectedShipping ? 'A CALCULAR' : totals.shipping ? format(totals.shipping) : 'GRÁTIS'}</Text></View><View style={s.divider} /><View style={s.totalRow}><View><Text style={s.totalLabel}>{selectedShipping ? 'TOTAL DO PEDIDO' : 'TOTAL SEM FRETE'}</Text><Text style={s.installments}>ou 10x de {format(Math.ceil(totals.total / 10))} sem juros*</Text></View><View style={s.totalValue}><Text testID="cart-total" style={s.total}>{format(totals.total)}</Text>{totals.savings > 0 && <Text style={s.savings}>Economia de {format(totals.savings)} hoje</Text>}</View></View></View>
-          <Pressable accessibilityRole="button" onPress={() => { setError(''); setSheet('checkout'); }} style={({ pressed }) => [s.primary, pressed && s.disabled]}><Text style={s.primaryText}>FINALIZAR COMPRA</Text><StoreIcon name="arrow-right" color={c.onPrimary} /></Pressable><Pressable accessibilityRole="button" onPress={browse} style={s.secondary}><StoreIcon name="arrow-left" color={c.text} size={20} /><Text style={s.secondaryText}>Continuar Comprando</Text></Pressable>
+          <Pressable accessibilityRole="button" onPress={() => router.push({ pathname: '/checkout', params: { coupon: totals.validCoupon || '', cep: delivery?.cep || '', service: delivery?.service || '' } })} style={({ pressed }) => [s.primary, pressed && s.disabled]}><Text style={s.primaryText}>FINALIZAR COMPRA</Text><StoreIcon name="arrow-right" color={c.onPrimary} /></Pressable><Pressable accessibilityRole="button" onPress={browse} style={s.secondary}><StoreIcon name="arrow-left" color={c.text} size={20} /><Text style={s.secondaryText}>Continuar Comprando</Text></Pressable>
           <View style={s.trust}><View style={s.inline}><StoreIcon name="shield-check" size={16} /><Text style={s.trustText}>Seu projeto em boas mãos</Text></View><View style={s.inline}><StoreIcon name="swap-horizontal" size={18} /><Text style={s.trustText}>Suporte SpeedZone</Text></View></View><Text style={s.footnote}>Demonstração · Frete grátis a partir de R$ 6.500 antes dos descontos. Frete, prazos e cupons ilustrativos. *Última parcela ajustada aos centavos.</Text>
         </>}
       </ScrollView>
     </KeyboardAvoidingView>
-    <Modal visible={sheet !== null} transparent animationType="slide" onRequestClose={() => !submitting && setSheet(null)}><View style={s.overlay}><Pressable accessibilityRole="button" accessibilityLabel="Fechar painel" disabled={submitting} onPress={() => setSheet(null)} style={StyleSheet.absoluteFill} /><SafeAreaView edges={['bottom']} style={s.sheet}><ScrollView contentContainerStyle={s.sheetContent}><View style={s.handle} /><View style={s.panelHeading}><Text style={s.summaryTitle}>{sheet === 'coupons' ? 'Cupons para seu projeto' : sheet === 'done' ? 'Simulação concluída' : 'Revisar finalização'}</Text><Pressable accessibilityRole="button" accessibilityLabel="Fechar" disabled={submitting} onPress={() => setSheet(null)} style={s.action}><StoreIcon name="close" /></Pressable></View>
-      {sheet === 'coupons' ? <>{[{ code: 'PROJETO10', text: '10% de desconto nos produtos.' }, { code: 'GARAGEPASS', text: '15% de desconto a partir de R$ 7.000 em produtos.' }, { code: 'TURBO50', text: 'Expirado. Não disponível para esta compra.' }].map(offer => <Pressable key={offer.code} accessibilityRole="button" onPress={() => { setSheet(null); apply(offer.code); }} style={s.offer}><Text style={s.green}>{offer.code}</Text><Text style={s.body}>{offer.text}</Text><Text style={s.link}>USAR CUPOM →</Text></Pressable>)}<Text style={s.footnote}>Um cupom por compra. Condições de demonstração.</Text></> : sheet === 'done' ? <><StoreIcon name="check-decagram-outline" size={56} /><Text style={s.body}>Pedido #{orderCode} salvo na sua conta! Esta é uma simulação: nenhum pagamento foi cobrado e nenhuma mercadoria será enviada.</Text><Pressable accessibilityRole="button" onPress={() => { setSheet(null); router.navigate('/(main)/orders'); }} style={s.primary}><Text style={s.primaryText}>VER MEUS PEDIDOS</Text></Pressable></> : <><Text style={s.error} accessibilityLiveRegion="polite">{error}</Text>{!delivery ? <><Text style={s.error}>Calcule o frete e selecione a entrega antes de concluir.</Text><Pressable accessibilityRole="button" onPress={() => setSheet(null)} style={s.secondary}><Text style={s.secondaryText}>Voltar para calcular frete</Text></Pressable></> : <Text style={s.body}>CEP {delivery.cep.slice(0, 5)}-{delivery.cep.slice(5)} · {selectedShipping?.label} · {selectedShipping?.days} (simulação)</Text>}<Text style={s.body}>{count} unidades · {items.length} produtos</Text><Text style={s.body}>Ao concluir, esta simulação será salva em Meus Pedidos. Nenhum pagamento ou envio real será realizado.</Text><View style={s.summaryRow}><Text style={s.body}>{selectedShipping ? 'Total demonstrativo com frete' : 'Total sem frete'}</Text><Text style={s.price}>{format(totals.total)}</Text></View><Pressable accessibilityRole="button" disabled={count === 0 || submitting || !delivery} onPress={() => void checkout()} style={[s.primary, count === 0 && s.disabled]}><Text style={s.primaryText}>{submitting ? 'SALVANDO PEDIDO...' : 'CONCLUIR SIMULAÇÃO'}</Text><StoreIcon name="check" color={c.onPrimary} /></Pressable></>}
-    </ScrollView></SafeAreaView></View></Modal>
+    <Modal visible={sheet === 'coupons'} transparent animationType="slide" onRequestClose={() => setSheet(null)}><View style={s.overlay}><SafeAreaView edges={['bottom']} style={s.sheet}><ScrollView contentContainerStyle={s.sheetContent}><Text style={s.summaryTitle}>Cupons para seu projeto</Text>{['PROJETO10', 'GARAGEPASS', 'TURBO50'].map(value => <Pressable key={value} accessibilityRole="button" onPress={() => apply(value)} style={s.offer}><Text style={s.green}>{value}</Text></Pressable>)}<Pressable accessibilityRole="button" onPress={() => setSheet(null)} style={s.secondary}><Text style={s.secondaryText}>Fechar</Text></Pressable></ScrollView></SafeAreaView></View></Modal>
   </SafeAreaView>;
 }
 

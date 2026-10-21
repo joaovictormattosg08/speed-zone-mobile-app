@@ -6,6 +6,7 @@ import { mkdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { setupOrders, listOrders, placeOrder } from './orders.mjs';
+import { setupSupport, listTickets, getTicket, createTicket, updateTicket } from './support.mjs';
 
 const derive = promisify(scrypt);
 const digest = value => createHash('sha256').update(value).digest('hex');
@@ -26,6 +27,7 @@ export function createApi({ database = resolve('server/data/speedzone.sqlite') }
     CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, email TEXT UNIQUE NOT NULL, password TEXT NOT NULL, profile TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS sessions (hash TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id), expires INTEGER NOT NULL);`);
   setupOrders(db);
+  setupSupport(db);
   const attempts = new Map();
   const publicUser = row => ({ ...JSON.parse(row.profile), id: row.id, email: row.email });
   const server = createServer(async (req, res) => {
@@ -80,6 +82,11 @@ export function createApi({ database = resolve('server/data/speedzone.sqlite') }
       const token = req.headers.authorization?.replace(/^Bearer /, '') || req.headers.cookie?.match(/(?:^|; )speedzone_session=([a-f0-9]+)/)?.[1] || '';
       const row = db.prepare('SELECT users.* FROM sessions JOIN users ON users.id = sessions.user_id WHERE sessions.hash = ? AND expires > ?').get(digest(token), Date.now());
       if (!row) fail('Entre na sua conta para continuar.', 401);
+      if (path === '/support/tickets' && req.method === 'GET') return send({ tickets: listTickets(db, row.id) });
+      if (path === '/support/tickets' && req.method === 'POST') return send({ ticket: createTicket(db, row, body) }, 201);
+      const ticketId = path?.match(/^\/support\/tickets\/(TK-[A-F0-9]{8})$/)?.[1];
+      if (ticketId && req.method === 'GET') return send({ ticket: getTicket(db, row.id, ticketId) });
+      if (ticketId && req.method === 'PATCH') return send({ ticket: updateTicket(db, row.id, ticketId, body) });
       if (path === '/orders' && req.method === 'GET') return send({ orders: listOrders(db, row.id) });
       if (path === '/orders' && req.method === 'POST') return send({ order: placeOrder(db, row, body) }, 201);
       if (path === '/auth/logout' && req.method === 'POST') { db.prepare('DELETE FROM sessions WHERE hash = ?').run(digest(token)); cookie(''); return send({ ok: true }); }

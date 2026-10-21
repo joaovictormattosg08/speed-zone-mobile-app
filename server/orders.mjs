@@ -35,9 +35,15 @@ export function placeOrder(db, user, body) {
   if (!delivery) invalid('CEP inválido para simular o frete.');
   const totals = calculateCart(items, body.coupon || null, delivery);
   if (body.coupon && !totals.validCoupon) invalid('O cupom não é válido para este pedido.');
+  let checkout;
+  if (body.checkout !== undefined) {
+    const value = body.checkout;
+    if (!value || typeof value.recipient !== 'string' || value.recipient.trim().length < 3 || value.recipient.length > 140 || typeof value.address !== 'string' || value.address.trim().length < 10 || value.address.length > 500 || typeof value.instructions !== 'string' || value.instructions.length > 1000 || !['pix', 'card'].includes(value.payment)) invalid('Confira o destinatário, endereço e forma de pagamento.');
+    checkout = { recipient: value.recipient.trim(), address: value.address.trim(), instructions: value.instructions.trim(), payment: value.payment };
+  }
   const id = `SZ-${randomUUID().slice(0, 8).toUpperCase()}`;
   const profile = JSON.parse(user.profile);
-  const order = { id, createdAt: new Date().toISOString(), status: 'processing', demo: true, items, delivery, subtotal: totals.subtotal, discount: totals.discount, shipping: totals.shipping, total: totals.total, coupon: totals.validCoupon, address: profile.address || '', tracking: null };
+  const order = { checkout, recipient: checkout?.recipient || `${profile.name} ${profile.surname}`, id, createdAt: new Date().toISOString(), status: 'processing', demo: true, items, delivery, subtotal: totals.subtotal, discount: totals.discount, shipping: totals.shipping, total: totals.total, coupon: totals.validCoupon, address: checkout?.address || profile.address || '', tracking: null };
   db.prepare('INSERT INTO orders VALUES (?, ?, ?, ?, ?)').run(id, user.id, body.requestKey, order.createdAt, JSON.stringify(order));
   return order;
 }

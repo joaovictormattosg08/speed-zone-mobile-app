@@ -37,7 +37,7 @@ export default function OrdersScreen() {
   const term = query.trim().toLocaleLowerCase('pt-BR').replace(/^#/, '');
   const visible = source.filter(order => (filter === 'all' || order.status === filter) && (!term || order.id.toLowerCase().includes(term) || order.items.some(item => `${item.id} ${item.name}`.toLowerCase().includes(term)))).sort((a, b) => (sortOldest ? 1 : -1) * a.createdAt.localeCompare(b.createdAt));
   const current = visible.filter(active); const history = visible.filter(order => !active(order));
-  function open(order: Order, view: 'details' | 'tracking') { setSelected(order); setSheet(view); setNotice(''); }
+  function open(order: Order, _view: 'details' | 'tracking') { router.push({ pathname: '/order/[id]', params: { id: order.id, ...(preview ? { preview: '1' } : {}) } }); }
   function explain(message: string) { setInfo(message); setSheet('info'); setSelected(null); }
   function buyAgain(order: Order) {
     let added = 0;
