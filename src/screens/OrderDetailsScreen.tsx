@@ -1,3 +1,5 @@
+import { OrderProgress } from '../components/OrderProgress';
+import { useCatalog } from '../context/CatalogContext';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Image, Modal, Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
@@ -5,14 +7,15 @@ import * as Clipboard from 'expo-clipboard';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../context/AuthContext';
 import { Order, demoOrders, statusLabels } from '../data/orders';
-import { money, products } from '../data/products';
+import { money } from '../data/products';
 import { StoreIcon } from '../components/StoreHeader';
 import { PilotAvatar } from '../components/PilotAvatar';
 import { colors as c, fonts as f } from '../theme/tokens';
 
 const format = (cents: number) => money(cents / 100);
-const titles = ['Pedido Realizado', 'Separação & Teste de Bancada', 'Despachado / Em Trânsito', 'Saiu para Entrega', 'Entregue no Destino'];
+
 export default function OrderDetailsScreen({ id, preview }: { id: string; preview: boolean }) {
+  const { products } = useCatalog();
   const { listOrders, user } = useAuth();
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
@@ -23,16 +26,24 @@ export default function OrderDetailsScreen({ id, preview }: { id: string; previe
   useFocusEffect(useCallback(() => {
     if (attempt > 0) setNotice('');
     let alive = true; setLoading(true); setError(''); setOrder(null);
-    const result = preview ? Promise.resolve(demoOrders) : listOrders();
-    result.then(data => { if (alive) setOrder(data.find(item => item.id === id) || null); }).catch(cause => { if (alive) setError(cause.message); }).finally(() => { if (alive) setLoading(false); });
-    return () => { alive = false; };
+    let inFlight = false;
+    const refresh = async () => {
+      if (inFlight) return;
+      inFlight = true;
+      try { const data = preview ? demoOrders : await listOrders(); if (alive) { setOrder(data.find(item => item.id === id) || null); setError(''); } }
+      catch (cause) { if (alive) setError((cause as Error).message); }
+      finally { inFlight = false; if (alive) setLoading(false); }
+    };
+    void refresh();
+    const timer = preview ? undefined : setInterval(() => void refresh(), 10000);
+    return () => { alive = false; if (timer) clearInterval(timer); };
   }, [id, preview, listOrders, attempt]));
   const back = () => { if (router.canGoBack()) router.back(); else router.replace('/(main)/orders'); };
   async function copy() { try { setNotice(await Clipboard.setStringAsync(id) ? 'Código do pedido copiado.' : 'Não foi possível copiar.'); } catch { setNotice('Não foi possível copiar neste dispositivo.'); } }
   async function share() { if (!order) return; try { await Share.share({ message: `Pedido #${order.id} • SpeedZone\n${statusLabels[order.status]}\nTotal: ${format(order.total)}\nPedido de demonstração, sem cobrança ou envio real.` }); } catch { setNotice('Não foi possível compartilhar o pedido.'); } }
   const cancelled = order?.status === 'cancelled';
-  const stage = order?.status === 'delivered' ? 4 : order?.status === 'transit' ? 3 : 0;
-  const headline = order?.status === 'pending' ? 'Pedido Pendente' : order?.status === 'confirmed' ? 'Pedido Confirmado' : cancelled ? 'Pedido Cancelado' : order?.status === 'transit' ? 'Saiu para Entrega ao Destinatário' : order?.status === 'delivered' ? 'Entregue no Destino' : 'Pedido Recebido • Em Preparação';
+
+  const headline = order?.status === 'pending' ? 'Pedido Pendente' : order?.status === 'confirmed' ? 'Pedido Confirmado' : cancelled ? 'Pedido Cancelado' : order?.status === 'transit' ? 'Pedido Enviado • Em Transporte' : order?.status === 'delivered' ? 'Entregue no Destino' : 'Pedido Recebido • Em Preparação';
   const created = order ? new Date(order.createdAt).toLocaleString('pt-BR', { day: '2-digit', month: 'long', hour: '2-digit', minute: '2-digit' }) : '';
   return <SafeAreaView edges={['top', 'left', 'right']} style={s.safe}>
     <View style={s.header}><Pressable accessibilityRole="button" accessibilityLabel="Voltar para pedidos" onPress={back} style={s.icon}><StoreIcon name="arrow-left" color={c.text} /></Pressable><View style={s.brand}><StoreIcon name="speedometer" size={20} /><Text style={s.logo}>SPEED<Text style={s.green}>ZONE</Text></Text></View><Text numberOfLines={1} style={s.headerTitle}>DETALHES E RASTREIO</Text><Pressable accessibilityRole="button" accessibilityLabel="Minha conta" onPress={() => router.navigate('/(main)/account')} style={s.icon}><PilotAvatar size={30} /></Pressable></View>
@@ -42,11 +53,9 @@ export default function OrderDetailsScreen({ id, preview }: { id: string; previe
       <Text style={s.disclaimer}>{preview ? 'PRÉVIA ILUSTRATIVA' : 'PEDIDO DE DEMONSTRAÇÃO'} • Sem cobrança ou envio real</Text>
       {notice !== '' && <Text accessibilityLiveRegion="polite" style={s.green}>{notice}</Text>}
       <View style={[s.card, s.statusCard]}><View style={s.between}><Text style={s.orderCode}>PEDIDO #{order.id}</Text><View style={[s.badge, cancelled && { backgroundColor: '#381a1e' }]}><Text style={[s.badgeText, cancelled && { color: c.error }]}>● {statusLabels[order.status].toUpperCase()}</Text></View></View><Text style={s.body}>Realizado em {created}</Text><View style={[s.row, { marginTop: 10 }]}><StoreIcon name={cancelled ? 'close-circle-outline' : 'truck-delivery-outline'} color={cancelled ? c.error : c.primary} /><Text style={[s.title, { flex: 1 }]}>{headline}</Text></View><View style={s.estimate}><StoreIcon name="clock-outline" color="#ffb95f" size={18} /><Text style={[s.body, { flex: 1 }]}>{cancelled ? 'Entrega cancelada' : 'Previsão de chegada:'}</Text><Text style={[s.green, s.estimateValue]}>{cancelled ? 'Não se aplica' : order.status === 'delivered' ? 'Entrega ilustrativa concluída' : order.delivery ? `${order.delivery.days}*` : preview ? 'Prazo ilustrativo • sem data real' : 'Sem previsão real'}</Text></View>{order.delivery && !cancelled && <Text style={s.small}>*Prazo simulado selecionado no carrinho, não uma promessa de entrega.</Text>}</View>
+      <View style={s.card}><Text style={s.title}>Acompanhar Pedido</Text><OrderProgress status={order.status} expanded /></View>
       <View style={s.mapCard}><View style={s.mapHeading}><StoreIcon name="radar" size={17} /><Text style={s.section}>TELEMETRIA DA ENTREGA</Text><Text style={s.mapTag}>ILUSTRATIVO</Text></View><View accessibilityLabel="Ilustração de trajeto, sem localização ao vivo" style={s.map}>{[25, 50, 75].map(top => <View key={top} style={[s.gridLine, { top: `${top}%` }]} />)}{[25, 50, 75].map(left => <View key={left} style={[s.gridVertical, { left: `${left}%` }]} />)}<View style={[s.routeLine, { left: '15%', top: '60%', width: '26%', transform: [{ rotate: '-35deg' }] }]} /><View style={[s.routeLine, { left: '36%', top: '46%', width: '28%' }]} /><View style={[s.routeLine, { left: '61%', top: '39%', width: '20%', transform: [{ rotate: '-25deg' }] }]} /><View style={s.origin}><StoreIcon name="warehouse" color={c.subtle} size={20} /><Text style={s.small}>Origem</Text></View><View style={s.van}><StoreIcon name="truck-outline" color={c.onPrimary} size={24} /></View><View style={s.destination}><StoreIcon name="map-marker" color="#00b8eb" size={34} /><Text style={s.micro}>Destino</Text></View><Text style={s.mapCaption}>{cancelled ? 'Rota cancelada' : 'Transportadora ainda não conectada'}</Text></View></View>
-      <View style={s.card}><View style={s.between}><Text style={s.title}>Histórico de Rastreamento</Text></View><Text selectable style={s.small}>{order.tracking || 'Código de rastreio ainda não disponível'}</Text>{cancelled ? <View style={s.row}><StoreIcon name="close-circle-outline" color={c.error} /><View style={{ flex: 1 }}><Text style={s.title}>Pedido cancelado</Text><Text style={s.body}>Este pedido foi cancelado. Nenhum pagamento ou reembolso real foi realizado.</Text></View></View> : titles.map((title, index) => {
-        const done = index <= stage; const current = index === stage;
-        return <View key={title} style={s.event}><View style={s.eventRail}><View style={[s.eventDot, done && { backgroundColor: c.primary }]}><StoreIcon name={current && index === 3 ? 'truck-outline' : done ? 'check' : 'flag-outline'} size={17} color={done ? c.onPrimary : c.subtle} /></View>{index < 4 && <View style={[s.eventLine, done && { backgroundColor: c.primary }]} />}</View><View style={[s.eventBody, current && s.currentEvent]}><View style={s.between}><Text style={[s.eventTitle, current && s.green]}>{title}</Text><Text style={[s.small, current && s.green]}>{current ? 'ATUAL' : done ? 'Concluído' : 'Pendente'}</Text></View><Text style={s.body}>{index === 0 ? `Simulação registrada em ${created}.` : preview && done ? ['','Peças conferidas • evento ilustrativo.','Coleta pela transportadora • evento ilustrativo.','Motorista a caminho • evento ilustrativo.','Recebimento confirmado • evento ilustrativo.'][index] : 'Aguardando integração de pagamento e logística.'}</Text></View></View>;
-      })}</View>
+      <View style={s.card}><View style={s.between}><Text style={s.title}>Histórico de Rastreamento</Text></View><Text selectable style={s.small}>{order.tracking || 'Código de rastreio ainda não disponível'}</Text>{[{ label: 'Pedido registrado', at: order.createdAt }, ...(order.statusHistory || []).map(event => ({ label: statusLabels[event.to], at: event.at }))].map((event,index,events) => <View key={index} style={s.event}><View style={s.eventRail}><View style={[s.eventDot,{backgroundColor:cancelled && index===events.length-1?c.error:c.primary}]}><StoreIcon name={cancelled && index===events.length-1?'close':'check'} size={17} color={c.onPrimary}/></View>{index<events.length-1&&<View style={[s.eventLine,{backgroundColor:c.primary}]}/>}</View><View style={[s.eventBody,index===events.length-1&&s.currentEvent]}><Text style={s.eventTitle}>{event.label}</Text><Text style={s.body}>{new Date(event.at).toLocaleString('pt-BR')}</Text></View></View>)}<Text style={s.green}>Status atual: {statusLabels[order.status]}</Text><Text style={s.small}>Atualização automática a cada 10 segundos enquanto esta tela estiver aberta. Eventos refletem as alterações registradas na administração.</Text>{!!error&&<Text accessibilityLiveRegion="polite" style={{color:c.error}}>Não foi possível atualizar: {error}</Text>}</View>
       <View style={s.card}><View style={s.row}><StoreIcon name="map-marker-outline" size={21} /><Text style={s.title}>Endereço de Entrega</Text></View><Text style={s.eventTitle}>{preview ? 'Piloto de demonstração' : order.recipient || `${user?.name || ''} ${user?.surname || ''}`}</Text><Text style={s.body}>{order.address || 'Endereço não informado nesta simulação.'}</Text>{order.delivery && <><Text style={s.body}>CEP: {order.delivery.cep.slice(0, 5)}-{order.delivery.cep.slice(5)}</Text><Text style={s.green}>{order.delivery.label} • {format(order.shipping)}</Text></>}</View>
       <View style={s.card}><View style={s.row}><StoreIcon name="package-variant-closed" size={21} /><Text style={s.title}>Itens do Pacote ({order.items.length})</Text></View>{order.items.map(item => { const product = products.find(product => product.id === item.id); return <View key={item.id} style={s.item}>{product ? <Image source={product.image} style={s.productImage} /> : <StoreIcon name="package-variant" />}<View style={{ flex: 1, gap: 4 }}><Text style={s.eventTitle}>{item.name}</Text><Text selectable style={s.small}>{item.id}</Text><View style={s.between}><Text style={s.body}>Qtd: {item.quantity} un</Text><Text style={s.itemPrice}>{money(item.price * item.quantity)}</Text></View></View></View>; })}</View>
       <View style={s.card}><View style={s.between}><Text style={s.title}>Resumo Financeiro</Text><Text style={s.mapTag}>SEM COBRANÇA</Text></View>{[['Subtotal das Peças', order.subtotal], [order.coupon ? `Cupom ${order.coupon}` : 'Desconto', -order.discount], [order.delivery?.label || 'Frete', order.shipping]].map(([label, value]) => <View key={label} style={s.between}><Text style={s.body}>{label}</Text><Text style={[s.itemPrice, Number(value) < 0 && s.green]}>{Number(value) === 0 && label === (order.delivery?.label || 'Frete') ? 'GRÁTIS' : format(Number(value))}</Text></View>)}<View style={s.divider} /><View style={s.between}><View style={{ flex: 1 }}><Text style={s.title}>{cancelled ? 'Total Cancelado' : 'Total do Pedido'}</Text><Text style={s.small}>Valores da simulação</Text>{order.discount > 0 && <Text style={s.savings}>Economia de {format(order.discount)}</Text>}</View><Text style={[s.total, cancelled && { color: c.subtle, textDecorationLine: 'line-through' }]}>{format(order.total)}</Text></View></View>

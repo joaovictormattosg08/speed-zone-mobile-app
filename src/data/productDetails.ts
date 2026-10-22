@@ -22,6 +22,14 @@ const g25: ProductDetails = {
 };
 // Technical copy supplied by the design reference; this catalog is a local demo.
 export function getProductDetails(product: Product): ProductDetails {
+  if (product.images?.length || product.description || product.power || product.material || product.platforms?.length) return {
+    gallery: product.images?.length ? product.images.map((uri, index) => ({ image: { uri }, label: `${product.name} • Foto ${index + 1}` })) : [{ image: product.image, label: product.name }],
+    seal: 'SPEEDZONE / PERFORMANCE', stage: product.stage,
+    description: product.description || product.name,
+    applications: product.platforms?.length ? product.platforms : [product.fit],
+    metrics: [{ label: 'POTÊNCIA SUPORTADA', value: product.power || 'Consulte' }, { label: 'CATEGORIA', value: product.category }],
+    specs: [['Código da peça', product.id], ['Diâmetro', product.diameter || 'Não informado'], ['Material', product.material || 'Não informado']],
+  };
   if (product.id === 'SZ-TUR-660-TS') return g25;
   return {
     gallery: [{ image: product.image, label: product.name }], seal: 'SPEEDZONE / PERFORMANCE', stage: product.stage,

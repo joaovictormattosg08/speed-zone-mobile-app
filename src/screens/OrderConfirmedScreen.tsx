@@ -1,3 +1,4 @@
+import { useCatalog } from '../context/CatalogContext';
 import { useCallback, useState } from 'react';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { ActivityIndicator, Image, Pressable, ScrollView, Text, View } from 'react-native';
@@ -7,9 +8,10 @@ import { StoreIcon } from '../components/StoreHeader';
 import { checkoutStyles as s, CheckoutButton, OrderTotals } from '../components/CheckoutUI';
 import { useAuth } from '../context/AuthContext';
 import { Order } from '../data/orders';
-import { money, products } from '../data/products';
+import { money } from '../data/products';
 
 export default function OrderConfirmedScreen() {
+  const { products } = useCatalog();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { listOrders } = useAuth();
   const [order, setOrder] = useState<Order | null>(null);

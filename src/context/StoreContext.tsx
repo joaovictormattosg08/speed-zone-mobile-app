@@ -1,10 +1,12 @@
+import { useCatalog } from './CatalogContext';
 import { createContext, PropsWithChildren, useContext, useState } from 'react';
 import { useAuth } from './AuthContext';
-import { products } from '../data/products';
+
 export const DEMO_STOCK = 5;
 type Store = { cart: Record<string, number>; add: (id: string, quantity?: number) => void; remove: (id: string) => void; removeItem: (id: string) => void; count: number; vehicle: string; setVehicle: (value: string) => void; favorites: string[]; toggleFavorite: (id: string) => void };
 const StoreContext = createContext<Store | null>(null);
 export function StoreProvider({ children }: PropsWithChildren) {
+  const { products } = useCatalog();
   const { user } = useAuth();
   const [cart, setCart] = useState<Record<string, number>>({});
   const [favorites, setFavorites] = useState<string[]>([]);
@@ -14,7 +16,7 @@ export function StoreProvider({ children }: PropsWithChildren) {
   const setVehicle = (name: string) => setSelection({ project: activeCar?.id, name });
   const add = (id: string, quantity = 1) => {
     if (!products.some(product => product.id === id) || !Number.isInteger(quantity) || quantity < 1) return;
-    setCart(previous => ({ ...previous, [id]: Math.min(DEMO_STOCK, (previous[id] ?? 0) + quantity) }));
+    setCart(previous => ({ ...previous, [id]: Math.min(products.find(p => p.id === id)?.stock ?? DEMO_STOCK, (previous[id] ?? 0) + quantity) }));
   };
   const remove = (id: string) => setCart(previous => { const next = { ...previous }; if (next[id] > 1) next[id]--; else delete next[id]; return next; });
   const removeItem = (id: string) => setCart(previous => { const next = { ...previous }; delete next[id]; return next; });

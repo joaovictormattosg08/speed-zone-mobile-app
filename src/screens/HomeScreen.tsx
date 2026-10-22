@@ -1,14 +1,16 @@
+import { useCatalog } from '../context/CatalogContext';
 import { useState } from 'react';
 import { Image, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StoreHeader, StoreIcon } from '../components/StoreHeader';
 import { useStore } from '../context/StoreContext';
-import { categories, money, products } from '../data/products';
+import { categories, money } from '../data/products';
 import { colors as c, fonts as f } from '../theme/tokens';
 
 const stages = ['TODOS', 'STAGE 1', 'STAGE 2+', 'STAGE 3', 'TRACK DAY'];
 export default function HomeScreen({ catalog = false }: { catalog?: boolean }) {
+  const { products } = useCatalog();
   const params = useLocalSearchParams<{ category?: string }>();
   const [query, setQuery] = useState('');
   const [stage, setStage] = useState('TODOS');

@@ -1,12 +1,14 @@
+import { useCatalog } from '../context/CatalogContext';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { StoreHeader, StoreIcon } from '../components/StoreHeader';
 import { useStore } from '../context/StoreContext';
-import { money, products } from '../data/products';
+import { money } from '../data/products';
 import { colors as c, fonts as f } from '../theme/tokens';
 
 export default function StoreSecondaryScreen({ page }: { page: 'cart' | 'orders' | 'account' }) {
+  const { products } = useCatalog();
   const { cart, add, remove, count, vehicle } = useStore();
   const title = { cart: 'Carrinho', orders: 'Pedidos', account: 'Conta' }[page];
   const items = products.filter(p => cart[p.id]);

@@ -1,3 +1,4 @@
+import { useCatalog } from '../context/CatalogContext';
 import { useLoyalty } from '../hooks/useLoyalty';
 import { useRef, useState } from 'react';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -7,11 +8,12 @@ import { StoreIcon } from '../components/StoreHeader';
 import { CartShipping } from '../components/CartShipping';
 import { useAuth } from '../context/AuthContext';
 import { useStore } from '../context/StoreContext';
-import { products } from '../data/products';
+
 import { calculateCart, ShippingChoice } from '../utils/cartPricing';
 import { checkoutStyles as s, Amount, CheckoutButton, CheckoutHeader, OrderTotals } from '../components/CheckoutUI';
 
 export default function CheckoutScreen() {
+  const { products } = useCatalog();
   const params = useLocalSearchParams<{ coupon?: string; cep?: string; service?: string }>();
   const loyalty = useLoyalty();
   const { user, placeOrder } = useAuth();

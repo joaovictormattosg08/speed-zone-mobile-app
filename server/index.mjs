@@ -1,3 +1,4 @@
+import { listProducts, saveProduct, setupProducts } from './products.mjs';
 import { listAdminOrders, changeOrderStatus } from './admin-orders.mjs';
 import { setupAdmin, isAdmin, adminOverview } from './admin.mjs';
 import { setupLoyalty, getLoyalty, redeem } from './loyalty.mjs';
@@ -34,6 +35,7 @@ export function createApi({ database = resolve('server/data/speedzone.sqlite') }
   setupOrders(db);
   setupLoyalty(db);
   setupSupport(db);
+  setupProducts(db);
   const attempts = new Map();
   const publicUser = row => ({ ...JSON.parse(row.profile), id: row.id, email: row.email, isAdmin: isAdmin(db, row.id) });
   const server = createServer(async (req, res) => {
@@ -50,6 +52,7 @@ export function createApi({ database = resolve('server/data/speedzone.sqlite') }
       if (req.method === 'OPTIONS') { res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PATCH, OPTIONS'); res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization'); res.writeHead(204); res.end(); return; }
       const path = req.url?.split('?')[0];
       if (path === '/health') return send({ ok: true });
+      if (path === '/products' && req.method === 'GET') return send({ products: listProducts(db) });
       let body = {};
       if (['POST', 'PATCH'].includes(req.method)) {
         if (!req.headers['content-type']?.startsWith('application/json')) fail('Envie JSON.', 415);
@@ -90,6 +93,10 @@ export function createApi({ database = resolve('server/data/speedzone.sqlite') }
       if (!row) fail('Entre na sua conta para continuar.', 401);
       if (path?.startsWith('/admin')) {
         if (!isAdmin(db, row.id)) fail('Acesso restrito a administradores.', 403);
+        if (path === '/admin/products' && req.method === 'GET') return send({ products: listProducts(db, true) });
+        if (path === '/admin/products' && req.method === 'POST') return send({ product: saveProduct(db, body) }, 201);
+        const productId = path.match(/^\/admin\/products\/([A-Z0-9-]+)$/)?.[1];
+        if (productId && req.method === 'PATCH') return send({ product: saveProduct(db, body, productId) });
         if (path === '/admin/overview' && req.method === 'GET') return send(adminOverview(db));
         if (path === '/admin/orders' && req.method === 'GET') return send({ orders: listAdminOrders(db) });
         const orderId = path.match(/^\/admin\/orders\/(SZ-[A-F0-9]{8})$/)?.[1];

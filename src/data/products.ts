@@ -1,5 +1,5 @@
 import { ImageSourcePropType } from 'react-native';
-export type Product = { id: string; name: string; price: number; oldPrice?: number; image: ImageSourcePropType; category: string; stage: string; badge: string; tone: string; fit: string };
+export type Product = { stock?: number; images?: string[]; platforms?: string[]; power?: string; diameter?: string; material?: string; description?: string; id: string; name: string; price: number; oldPrice?: number; image: ImageSourcePropType; category: string; stage: string; badge: string; tone: string; fit: string };
 export const products: Product[] = [
   { id: 'SZ-TUR-660-TS', name: 'Turbocompressor Billet Garrett G25-660 Twin Scroll T4 .82 A/R', price: 7890, image: require('../../assets/products/g25-main.png'), category: 'Turbo', stage: 'STAGE 3', badge: 'RACE READY', tone: '#164535', fit: 'Projetos customizados' },
   { id: 'SZ-TUR-042', name: 'Turbocompressor Garrett GT2871R Ball Bearing', price: 4850, image: require('../../assets/store/turbo.png'), category: 'Turbo', stage: 'STAGE 2+', badge: 'MAIS VENDIDO', tone: '#e29100', fit: 'Compatível EA888' },

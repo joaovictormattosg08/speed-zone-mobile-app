@@ -1,3 +1,4 @@
+import { useCatalog } from '../context/CatalogContext';
 import { PilotAvatar } from '../components/PilotAvatar';
 import { ComponentProps, PropsWithChildren, useEffect, useState } from 'react';
 import { Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, Share, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -7,7 +8,7 @@ import * as Clipboard from 'expo-clipboard';
 import { StoreIcon } from '../components/StoreHeader';
 import { DEMO_STOCK, useStore } from '../context/StoreContext';
 import { getProductDetails } from '../data/productDetails';
-import { money, products } from '../data/products';
+import { money } from '../data/products';
 import { colors as c, fonts as f } from '../theme/tokens';
 
 const blue = '#7bd0ff';
@@ -22,6 +23,7 @@ function Accordion({ title, icon, color = blue, initiallyOpen = false, children 
 }
 
 export default function ProductScreen({ id }: { id: string }) {
+  const { products } = useCatalog();
   const product = products.find(item => item.id === id);
   const { cart, add, favorites, toggleFavorite } = useStore();
   const [slide, setSlide] = useState(0);
@@ -40,9 +42,10 @@ export default function ProductScreen({ id }: { id: string }) {
   if (!product) return <SafeAreaView style={s.safe}><View style={s.notFound}><StoreIcon name="package-variant" size={48} /><Text style={s.title}>Peça não encontrada</Text><Text style={s.body}>Este produto não está disponível no catálogo.</Text><Pressable accessibilityRole="button" onPress={() => router.replace('/(main)/catalog')} style={s.buy}><Text style={s.buyText}>Voltar ao Catálogo</Text></Pressable></View></SafeAreaView>;
 
   const details = getProductDetails(product);
-  const remaining = Math.max(0, DEMO_STOCK - (cart[id] ?? 0));
+  const remaining = Math.max(0, (product.stock ?? DEMO_STOCK) - (cart[id] ?? 0));
   const selectedQuantity = Math.min(quantity, Math.max(1, remaining));
-  const canAdd = available && remaining > 0;
+  const inStock = available && (product.stock ?? DEMO_STOCK) > 0;
+  const canAdd = inStock && remaining > 0;
   const favorite = favorites.includes(id);
   const cardPrice = product.id === 'SZ-TUR-660-TS' ? product.price / 0.95 : product.price;
   async function copySku() {
@@ -89,11 +92,11 @@ export default function ProductScreen({ id }: { id: string }) {
           {details.gallery.length > 1 && <View style={s.thumbnails}>{details.gallery.map((photo, index) => <Pressable key={photo.label} accessibilityRole="button" accessibilityLabel={`Ver foto ${index + 1}: ${photo.label}`} accessibilityState={{ selected: slide === index }} onPress={() => setSlide(index)} style={[s.thumbnail, slide === index && s.thumbnailActive]}><Image source={photo.image} style={s.thumbnailImage} resizeMode="cover" /></Pressable>)}</View>}
           <View style={s.identification}><Text style={s.category}>{product.category.toUpperCase()} / PERFORMANCE RACING</Text><Pressable accessibilityRole="button" accessibilityLabel={`Copiar SKU ${id}`} onPress={copySku} style={s.sku}><Text style={s.skuLabel}>SKU:</Text><Text style={s.skuCode}>{id}</Text><StoreIcon name="content-copy" size={13} color={c.muted} /></Pressable></View>
           <Text style={s.title}>{product.name}</Text>
-          <View style={s.stock}><View style={[s.dot, !available && { backgroundColor: c.error }]} /><Text style={[s.stockLabel, !available && { color: c.error }]}>{available ? 'Em Estoque' : 'Indisponível'}</Text><Text style={s.stockText}>{available ? `• ${DEMO_STOCK} unidades no CD São Paulo` : '• Aguarde a reposição desta peça'}</Text></View>
+          <View style={s.stock}><View style={[s.dot, !inStock && { backgroundColor: c.error }]} /><Text style={[s.stockLabel, !inStock && { color: c.error }]}>{inStock ? 'Em Estoque' : 'Indisponível'}</Text><Text style={s.stockText}>{inStock ? `• ${product.stock ?? DEMO_STOCK} unidades no CD São Paulo` : '• Aguarde a reposição desta peça'}</Text></View>
           <View style={s.pricePanel}><View style={s.priceHeading}><Text style={s.price}>{money(product.price)}</Text>{product.id === 'SZ-TUR-660-TS' && <View style={s.discount}><Text style={s.discountText}>-5% OFF</Text></View>}</View><Text style={s.paymentLabel}>À VISTA NO PIX COM DESPACHO IMEDIATO</Text><View style={s.installments}><StoreIcon name="credit-card-outline" color={blue} size={21} /><Text style={s.installmentText}>ou até <Text style={{ fontFamily: f.medium }}>12x de {money(cardPrice / 12)}</Text> sem juros</Text><Text style={s.cardLabel}>CARTÃO</Text></View></View>
           <View style={s.quantityPanel}><Text style={s.quantityLabel}>Quantidade:</Text><View style={s.stepper}><Pressable accessibilityRole="button" accessibilityLabel="Diminuir quantidade" accessibilityState={{ disabled: !canAdd || selectedQuantity <= 1 }} disabled={!canAdd || selectedQuantity <= 1} onPress={() => setQuantity(selectedQuantity - 1)} style={[s.stepButton, (!canAdd || selectedQuantity <= 1) && s.disabled]}><StoreIcon name="minus" color={c.text} size={20} /></Pressable><Text accessibilityLiveRegion="polite" style={s.quantity}>{selectedQuantity}</Text><Pressable accessibilityRole="button" accessibilityLabel="Aumentar quantidade" accessibilityState={{ disabled: !canAdd || selectedQuantity >= remaining }} disabled={!canAdd || selectedQuantity >= remaining} onPress={() => setQuantity(selectedQuantity + 1)} style={[s.stepButton, (!canAdd || selectedQuantity >= remaining) && s.disabled]}><StoreIcon name="plus" color={c.text} size={20} /></Pressable></View></View>
           {(cart[id] ?? 0) > 0 && <Text style={s.cartHint}>{cart[id]} no carrinho · {remaining} {remaining === 1 ? 'unidade disponível' : 'unidades disponíveis'} para adicionar</Text>}
-          <View style={s.simulation}><View style={s.simulationLabel}><StoreIcon name="tune" size={14} color={c.subtle} /><Text style={s.micro}>Simular disponibilidade:</Text></View><Pressable accessibilityRole="button" onPress={() => setAvailable(!available)} style={s.simulationButton}><Text style={s.simulationText}>{available ? 'Alternar p/ Indisponível' : 'Reativar Estoque'}</Text></Pressable></View>
+          <View style={s.simulation}><View style={s.simulationLabel}><StoreIcon name="tune" size={14} color={c.subtle} /><Text style={s.micro}>Simular disponibilidade:</Text></View><Pressable accessibilityRole="button" onPress={() => setAvailable(!available)} style={s.simulationButton}><Text style={s.simulationText}>{inStock ? 'Alternar p/ Indisponível' : 'Reativar Estoque'}</Text></Pressable></View>
           <View style={s.accordions}>
             <Accordion title="Descrição & Aplicação Mecânica" icon="information-outline" initiallyOpen><Text style={s.body}>{details.description}</Text><View style={s.applications}><Text style={s.applicationsTitle}>APLICAÇÕES DE REFERÊNCIA:</Text>{details.applications.map(application => <View style={s.application} key={application}><StoreIcon name="check" size={15} /><Text style={s.applicationText}>{application}</Text></View>)}</View></Accordion>
             <Accordion title="Ficha Técnica & Telemetria" icon="tune" color={c.primary} initiallyOpen><View style={s.metrics}>{details.metrics.map((metric, index) => <View key={metric.label} style={s.metric}><Text style={s.micro}>{metric.label}</Text><Text style={[s.metricValue, index === 0 && { color: c.primary }]}>{metric.value}</Text></View>)}</View><View>{details.specs.map(([label, value], index) => <View key={label} style={[s.specRow, index % 2 === 0 && { backgroundColor: c.panel }]}><Text style={s.specLabel}>{label}:</Text><Text style={[s.specValue, index === details.specs.length - 1 && { color: blue }]}>{value}</Text></View>)}</View></Accordion>

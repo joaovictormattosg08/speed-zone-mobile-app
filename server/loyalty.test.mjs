@@ -5,6 +5,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createApi } from './index.mjs';
+import { listProducts, saveProduct } from './products.mjs';
 test('loyalty: earnings, atomic redemption, account ownership, one-use coupons and persistence', async () => {
  const directory = await mkdtemp(join(tmpdir(), 'sz-loyalty-')); const database = join(directory, 'test.sqlite');
  let server = createApi({ database });
@@ -34,6 +35,10 @@ test('loyalty: earnings, atomic redemption, account ownership, one-use coupons a
   const shipping = (await call('/loyalty/redeem', a, { rewardId: 'shipping', requestKey: 'redeem-free-shipping' })).data.coupon;
   const free = await call('/orders', a, { ...discounted, requestKey: 'use-free-shipping', coupon: shipping.code }); assert.equal(free.data.order.shipping, 0); assert.equal(free.data.order.delivery.price, 0); assert.equal(free.data.order.pointsEarned, 145);
   for (const [rewardId, percent] of [['off10',10],['off15',15]]) { const c = (await call('/loyalty/redeem', a, { rewardId, requestKey: `redeem-${rewardId}` })).data.coupon; const o = await call('/orders', a, { ...discounted, requestKey: `use-${rewardId}`, coupon: c.code }); assert.equal(o.data.order.discount, 14500 * percent / 100); }
+  const inventory = new DatabaseSync(database);
+  const turbo = listProducts(inventory, true).find(p => p.id === 'SZ-TUR-660-TS');
+  saveProduct(inventory, { ...turbo, stock: 5 }, turbo.id);
+  inventory.close();
   await call('/orders', a, { ...purchase, requestKey: 'earn-more-points' });
   const c20 = (await call('/loyalty/redeem', a, { rewardId: 'off20', requestKey: 'redeem-twenty' })).data.coupon;
   const twenty = await call('/orders', a, { ...discounted, requestKey: 'use-twenty', coupon: c20.code }); assert.equal(twenty.data.order.discount, 2900);

@@ -1,3 +1,4 @@
+import { useCatalog } from '../context/CatalogContext';
 import { useLoyalty } from '../hooks/useLoyalty';
 import { useAuth } from '../context/AuthContext';
 import { CartShipping } from '../components/CartShipping';
@@ -7,12 +8,13 @@ import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StoreHeader, StoreIcon } from '../components/StoreHeader';
 import { DEMO_STOCK, useStore } from '../context/StoreContext';
-import { money, products } from '../data/products';
+import { money } from '../data/products';
 import { calculateCart, couponError, ShippingChoice, shippingOptions } from '../utils/cartPricing';
 import { colors as c, fonts as f } from '../theme/tokens';
 
 const format = (cents: number) => money(cents / 100);
 export default function CartScreen() {
+  const { products } = useCatalog();
   const { cart, add, remove, removeItem, count } = useStore();
   const { user } = useAuth();
   const loyalty = useLoyalty();
@@ -55,7 +57,7 @@ export default function CartScreen() {
           <View accessibilityRole="progressbar" accessibilityLabel="Progresso para frete grátis" accessibilityValue={{ min: 0, max: 100, now: totals.progress }} style={s.track}><View style={[s.progress, { width: `${totals.progress}%` }]} /></View>
           <View style={s.items}>{items.map(item => <View style={s.item} key={item.id}>
             <View style={s.itemTop}><Pressable accessibilityRole="button" accessibilityLabel={`Ver detalhes de ${item.name}`} onPress={() => router.push({ pathname: '/product/[id]', params: { id: item.id } })} style={s.imageBox}><Image source={item.image} style={s.image} resizeMode="cover" /><View style={s.badge}><Text style={s.badgeText}>{item.badge}</Text></View></Pressable><View style={s.itemInfo}><Text style={s.sku}>{item.id}</Text><Text numberOfLines={2} style={s.itemName}>{item.name}</Text><View style={s.fit}><Text style={s.fitText}>✓ {item.fit}</Text></View></View><Pressable accessibilityRole="button" accessibilityLabel={`Excluir ${item.name} do carrinho`} onPress={() => removeItem(item.id)} style={s.trash}><StoreIcon name="trash-can-outline" size={18} color={c.muted} /></Pressable></View>
-            <View style={s.itemBottom}><View style={s.itemPrice}>{item.oldPrice && <Text style={s.oldPrice}>{money(item.oldPrice * item.quantity)}</Text>}<Text style={s.price}>{money(item.price * item.quantity)}</Text>{item.quantity > 1 && <Text style={s.unit}>{money(item.price)} un</Text>}</View><View style={s.stepper}><Pressable accessibilityRole="button" accessibilityLabel={`Diminuir quantidade de ${item.name}`} onPress={() => remove(item.id)} style={s.step}><StoreIcon name="minus" color={c.text} size={18} /></Pressable><Text accessibilityLabel={`Quantidade de ${item.name}: ${item.quantity}`} style={s.quantity}>{item.quantity}</Text><Pressable accessibilityRole="button" accessibilityLabel={`Aumentar quantidade de ${item.name}`} accessibilityState={{ disabled: item.quantity >= DEMO_STOCK }} disabled={item.quantity >= DEMO_STOCK} onPress={() => add(item.id)} style={[s.step, item.quantity >= DEMO_STOCK && s.disabled]}><StoreIcon name="plus" color={c.text} size={18} /></Pressable></View></View>
+            <View style={s.itemBottom}><View style={s.itemPrice}>{item.oldPrice && <Text style={s.oldPrice}>{money(item.oldPrice * item.quantity)}</Text>}<Text style={s.price}>{money(item.price * item.quantity)}</Text>{item.quantity > 1 && <Text style={s.unit}>{money(item.price)} un</Text>}</View><View style={s.stepper}><Pressable accessibilityRole="button" accessibilityLabel={`Diminuir quantidade de ${item.name}`} onPress={() => remove(item.id)} style={s.step}><StoreIcon name="minus" color={c.text} size={18} /></Pressable><Text accessibilityLabel={`Quantidade de ${item.name}: ${item.quantity}`} style={s.quantity}>{item.quantity}</Text><Pressable accessibilityRole="button" accessibilityLabel={`Aumentar quantidade de ${item.name}`} accessibilityState={{ disabled: item.quantity >= (item.stock ?? DEMO_STOCK) }} disabled={item.quantity >= (item.stock ?? DEMO_STOCK)} onPress={() => add(item.id)} style={[s.step, item.quantity >= (item.stock ?? DEMO_STOCK) && s.disabled]}><StoreIcon name="plus" color={c.text} size={18} /></Pressable></View></View>
           </View>)}</View>
           <View style={s.panel}><View style={s.panelHeading}><StoreIcon name="ticket-percent-outline" size={20} /><Text style={s.panelTitle}>Cupom de Desconto</Text><Pressable accessibilityRole="button" onPress={() => setSheet('coupons')} style={s.action}><Text style={s.link}>VER CUPONS</Text></Pressable></View><View style={s.couponForm}><View style={s.inputWrap}><TextInput accessibilityLabel="Código do cupom" autoCapitalize="characters" autoCorrect={false} placeholder="Insira seu código" placeholderTextColor={c.subtle} value={code} onChangeText={value => { setCode(value); setError(''); }} onSubmitEditing={() => apply()} returnKeyType="done" style={s.input} />{code !== '' && <Pressable accessibilityRole="button" accessibilityLabel="Limpar código digitado" onPress={() => { setCode(''); setError(''); }} style={s.action}><StoreIcon name="close-circle-outline" size={18} color={c.muted} /></Pressable>}</View><Pressable accessibilityRole="button" onPress={() => apply()} style={s.apply}><Text style={s.applyText}>APLICAR</Text></Pressable></View>
           {totals.validCoupon && <View style={s.couponSuccess}><StoreIcon name="check-circle-outline" size={20} /><Text accessibilityLiveRegion="polite" style={s.couponText}>Cupom {totals.validCoupon} aplicado (-{format(totals.discount)})</Text><Pressable accessibilityRole="button" accessibilityLabel="Remover cupom" onPress={clearCoupon} style={s.action}><StoreIcon name="close" size={17} /></Pressable></View>}
