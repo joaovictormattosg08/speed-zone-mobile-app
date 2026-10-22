@@ -6,4 +6,4 @@ export const rewards = [
   { id: 'shipping', label: 'Frete grátis', cost: 5000, percent: 0, freeShipping: true },
 ];
 export type LoyaltyCoupon = { code: string; rewardId: string; label: string; cost: number; percent: number; freeShipping: boolean; createdAt: string; usedOrder: string | null };
-export type Loyalty = { balance: number; earned: number; spent: number; coupons: LoyaltyCoupon[]; history: { id: string; points: number; label: string; createdAt: string }[] };
+export type Loyalty = { balance: number; reversed: number; earned: number; spent: number; coupons: LoyaltyCoupon[]; history: { id: string; points: number; label: string; createdAt: string }[] };

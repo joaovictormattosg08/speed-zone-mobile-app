@@ -1,3 +1,4 @@
+import { DatabaseSync } from 'node:sqlite';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtemp, rm, readFile } from 'node:fs/promises';
@@ -25,6 +26,20 @@ test('accounts, sessions, profile isolation and persistence', async () => {
     assert.ok(registered.cookie.includes('HttpOnly')); assert.ok(registered.cookie.includes('Max-Age='));
     assert.equal(registered.data.user.password, undefined);
     const token = registered.data.token;
+    assert.equal(registered.data.user.isAdmin, false);
+    assert.equal((await call('/admin/overview')).status, 401);
+    assert.equal((await call('/admin/overview', 'GET', undefined, token)).status, 403);
+    await call('/me', 'PATCH', { isAdmin: true, role: 'admin' }, token);
+    assert.equal((await call('/admin/overview', 'GET', undefined, token)).status, 403);
+    const permissionsDb = new DatabaseSync(database);
+    permissionsDb.prepare('INSERT INTO administrators VALUES (?, ?)').run(registered.data.user.id, new Date().toISOString());
+    assert.equal((await call('/me', 'GET', undefined, token)).data.user.isAdmin, true);
+    const admin = await call('/admin/overview', 'GET', undefined, token);
+    assert.equal(admin.status, 200); assert.equal(admin.data.customers, 1);
+    assert.equal(JSON.stringify(admin.data).includes('password'), false);
+    permissionsDb.prepare('DELETE FROM administrators WHERE user_id = ?').run(registered.data.user.id);
+    permissionsDb.close();
+    assert.equal((await call('/admin/overview', 'GET', undefined, token)).status, 403);
     assert.equal((await call('/auth/register', 'POST', account)).status, 409);
     assert.equal((await call('/auth/login', 'POST', { ...account, password: 'WrongPassword' })).status, 401);
     const other = await call('/auth/register', 'POST', { ...account, email: 'other@example.com', remember: false }, undefined, 'http://localhost:8081');

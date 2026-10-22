@@ -13,7 +13,7 @@ import { colors as c, fonts as f } from '../theme/tokens';
 const currency = (cents: number) => money(cents / 100);
 const date = (value: string) => new Date(value).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' });
 const steps = ['Faturamento', 'Expedição', 'Em Trânsito', 'Entregue'];
-const active = (order: Order) => order.status === 'processing' || order.status === 'transit';
+const active = (order: Order) => ['pending','confirmed','processing','transit'].includes(order.status);
 export default function OrdersScreen() {
   const { listOrders } = useAuth();
   const { add, cart } = useStore();

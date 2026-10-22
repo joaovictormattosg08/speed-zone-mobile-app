@@ -1,3 +1,5 @@
+import { listAdminOrders, changeOrderStatus } from './admin-orders.mjs';
+import { setupAdmin, isAdmin, adminOverview } from './admin.mjs';
 import { setupLoyalty, getLoyalty, redeem } from './loyalty.mjs';
 import { addressError, formatAddress } from '../src/utils/address.ts';
 import { createServer } from 'node:http';
@@ -28,11 +30,12 @@ export function createApi({ database = resolve('server/data/speedzone.sqlite') }
   db.exec(`PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;
     CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, email TEXT UNIQUE NOT NULL, password TEXT NOT NULL, profile TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS sessions (hash TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id), expires INTEGER NOT NULL);`);
+  setupAdmin(db);
   setupOrders(db);
   setupLoyalty(db);
   setupSupport(db);
   const attempts = new Map();
-  const publicUser = row => ({ ...JSON.parse(row.profile), id: row.id, email: row.email });
+  const publicUser = row => ({ ...JSON.parse(row.profile), id: row.id, email: row.email, isAdmin: isAdmin(db, row.id) });
   const server = createServer(async (req, res) => {
     res.setHeader('Content-Type', 'application/json; charset=utf-8');
     res.setHeader('Cache-Control', 'no-store');
@@ -85,6 +88,14 @@ export function createApi({ database = resolve('server/data/speedzone.sqlite') }
       const token = req.headers.authorization?.replace(/^Bearer /, '') || req.headers.cookie?.match(/(?:^|; )speedzone_session=([a-f0-9]+)/)?.[1] || '';
       const row = db.prepare('SELECT users.* FROM sessions JOIN users ON users.id = sessions.user_id WHERE sessions.hash = ? AND expires > ?').get(digest(token), Date.now());
       if (!row) fail('Entre na sua conta para continuar.', 401);
+      if (path?.startsWith('/admin')) {
+        if (!isAdmin(db, row.id)) fail('Acesso restrito a administradores.', 403);
+        if (path === '/admin/overview' && req.method === 'GET') return send(adminOverview(db));
+        if (path === '/admin/orders' && req.method === 'GET') return send({ orders: listAdminOrders(db) });
+        const orderId = path.match(/^\/admin\/orders\/(SZ-[A-F0-9]{8})$/)?.[1];
+        if (orderId && req.method === 'PATCH') return send({ order: changeOrderStatus(db, row.id, orderId, body) });
+        fail('Rota administrativa não encontrada.', 404);
+      }
       if (path === '/support/tickets' && req.method === 'GET') return send({ tickets: listTickets(db, row.id) });
       if (path === '/support/tickets' && req.method === 'POST') return send({ ticket: createTicket(db, row, body) }, 201);
       const ticketId = path?.match(/^\/support\/tickets\/(TK-[A-F0-9]{8})$/)?.[1];
@@ -126,7 +137,7 @@ export function createApi({ database = resolve('server/data/speedzone.sqlite') }
         if (profile.activeCarId !== null && !profile.cars.some(car => car.id === profile.activeCarId)) fail('Projeto ativo inválido.');
         const email = 'email' in body ? emailOf(body.email) : row.email;
         try { db.prepare('UPDATE users SET email = ?, profile = ? WHERE id = ?').run(email, JSON.stringify(profile), row.id); } catch (error) { if (String(error).includes('UNIQUE')) fail('Este e-mail já está cadastrado.', 409); throw error; }
-        return send({ user: { ...profile, id: row.id, email } });
+        return send({ user: { ...profile, id: row.id, email, isAdmin: isAdmin(db, row.id) } });
       }
       fail('Rota não encontrada.', 404);
     } catch (error) { send({ error: error.status ? error.message : 'Não foi possível concluir a operação.' }, error.status || 500); }

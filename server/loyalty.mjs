@@ -23,8 +23,8 @@ export function creditOrder(db, userId, order) {
 function couponView(row) { const reward = rewards.find(r => r.id === row.reward_id); return { ...reward, rewardId: reward.id, code: row.code, createdAt: row.created_at, usedOrder: row.used_order }; }
 export function getLoyalty(db, userId) {
   const history = db.prepare('SELECT id, points, label, createdAt FROM loyalty_ledger WHERE user_id = ? ORDER BY createdAt DESC, id DESC').all(userId);
-  const earned = history.reduce((sum, item) => sum + Math.max(0, item.points), 0), spent = history.reduce((sum, item) => sum + Math.max(0, -item.points), 0);
-  return { balance: earned - spent, earned, spent, history, coupons: db.prepare('SELECT * FROM loyalty_coupons WHERE user_id = ? ORDER BY created_at DESC').all(userId).map(couponView) };
+  const earned = history.reduce((sum, item) => sum + Math.max(0, item.points), 0), spent = history.reduce((sum, item) => sum + (item.id.startsWith('redeem:') ? Math.max(0, -item.points) : 0), 0), reversed = history.reduce((sum, item) => sum + (item.id.startsWith('cancel:') ? Math.max(0, -item.points) : 0), 0);
+  return { balance: earned - spent - reversed, earned, spent, reversed, history, coupons: db.prepare('SELECT * FROM loyalty_coupons WHERE user_id = ? ORDER BY created_at DESC').all(userId).map(couponView) };
 }
 export function redeem(db, userId, body) {
   if (typeof body.requestKey !== 'string' || !/^[\w-]{8,100}$/.test(body.requestKey)) fail('Identificador de resgate inválido.');

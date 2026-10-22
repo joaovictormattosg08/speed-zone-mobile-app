@@ -90,3 +90,15 @@ Conta → Endereço de Entrega abre `/address`, também acessível pelo checkout
 Conta → SpeedPoints Club permite consultar saldo, histórico, recompensas e cupons. Cada real inteiro em produtos após descontos (sem frete) gera 1 ponto. Nesta fase os pedidos e os pontos são demonstrativos. Pedidos antigos não cancelados são creditados uma única vez na inicialização da API. Resgates: 5.000/10.000/15.000/20.000 pontos por 5%/10%/15%/20%; 5.000 pontos por frete grátis.
 
 O resgate debita pontos e emite código aleatório exclusivo da conta, de uso único e sem validade nesta demonstração. Um cupom por compra, sem acumular com promoções. Carrinho → Ver cupons lista os disponíveis. Crédito, débito e consumo são protegidos por transações SQLite e identificadores idempotentes. O servidor recalcula valores e valida proprietário/disponibilidade; não confia no saldo ou desconto enviado pelo app. A futura integração de pagamentos reais deve creditar somente pagamentos confirmados e implementar estorno de pontos para cancelamentos/reembolsos antes de uso em produção.
+
+## Administração
+
+Contas autorizadas veem Minha Conta → Painel Administrativo. A rota `/admin` tem proteção de navegação e a API valida a permissão no banco em cada acesso, inclusive após revogação. Esta versão oferece indicadores e os últimos 20 pedidos, em consulta. Não há edição administrativa ainda.
+
+Para autorizar uma conta existente no servidor: `npm run admin -- email@exemplo.com`. Para revogar: `npm run admin -- email@exemplo.com revoke`. O comando usa DATABASE_PATH de .env.local, quando definido; a autorização é ligada ao ID do usuário e não muda por alteração de e-mail. O cadastro público e a edição do perfil não concedem permissão. Recarregue o app após conceder acesso.
+
+## Pedidos administrativos
+
+Dashboard → Ver Vendas abre `/admin-orders`, restrita a administradores. Busca por código, cliente, e-mail e peça; filtros por status; ordenação por data ou valor; detalhes e histórico. PATCH /admin/orders/:id valida a sequência pendente → confirmado → preparação → enviado → entregue, com cancelamento antes da entrega. Pedidos novos ainda começam em preparação, como no checkout demonstrativo existente. Status terminais não podem ser reabertos. O servidor valida o status esperado para impedir gravações sobre alterações concorrentes.
+
+Cancelamentos estornam uma única vez os pontos creditados da compra, em transação com o pedido. Pontos já gastos podem gerar saldo negativo, bloqueando novos resgates até recomposição. Cupons consumidos não são reativados. Não há cobrança nem reembolso financeiro real. O histórico registra data, status anterior/novo e ID do administrador.

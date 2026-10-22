@@ -34,6 +34,7 @@
     "web": "expo start --web",
     "lint": "expo lint",
     "typecheck": "tsc --noEmit",
+    "admin": "node --env-file-if-exists=.env.local server/admin-access.mjs",
     "api": "node --env-file-if-exists=.env.local server/index.mjs",
     "test:api": "node --test server/auth.test.mjs server/loyalty.test.mjs"
   },

@@ -1,3 +1,4 @@
+import { DatabaseSync } from 'node:sqlite';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtemp, rm } from 'node:fs/promises';
@@ -9,7 +10,7 @@ test('loyalty: earnings, atomic redemption, account ownership, one-use coupons a
  let server = createApi({ database });
  const listen = () => new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
  const close = () => new Promise(resolve => server.close(resolve)); await listen();
- const call = async (path, token, body) => { const response = await fetch(`http://127.0.0.1:${server.address().port}${path}`, { method: body ? 'POST' : 'GET', headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }, ...(body ? { body: JSON.stringify(body) } : {}) }); return { status: response.status, data: await response.json() }; };
+ const call = async (path, token, body) => { const response = await fetch(`http://127.0.0.1:${server.address().port}${path}`, { method: path.startsWith('/admin/orders/') && body ? 'PATCH' : body ? 'POST' : 'GET', headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }, ...(body ? { body: JSON.stringify(body) } : {}) }); return { status: response.status, data: await response.json() }; };
  try {
   const register = email => call('/auth/register', null, { name: 'Teste', surname: 'Piloto', email, password: 'TesteSenha123!' });
   const a = (await register('a@example.com')).data.token, b = (await register('b@example.com')).data.token;
@@ -36,6 +37,21 @@ test('loyalty: earnings, atomic redemption, account ownership, one-use coupons a
   await call('/orders', a, { ...purchase, requestKey: 'earn-more-points' });
   const c20 = (await call('/loyalty/redeem', a, { rewardId: 'off20', requestKey: 'redeem-twenty' })).data.coupon;
   const twenty = await call('/orders', a, { ...discounted, requestKey: 'use-twenty', coupon: c20.code }); assert.equal(twenty.data.order.discount, 2900);
+  assert.equal((await call('/admin/orders', a)).status, 403);
+  const access = new DatabaseSync(database); access.prepare('INSERT INTO administrators SELECT id, ? FROM users WHERE email = ?').run(new Date().toISOString(),'b@example.com'); access.close();
+  assert.ok((await call('/admin/orders', b)).data.orders.length > 0);
+  const endpoint = '/admin/orders/' + applied.data.order.id;
+  assert.equal((await call(endpoint, a, { expectedStatus:'processing',status:'cancelled' })).status, 403);
+  assert.equal((await call(endpoint, b, { expectedStatus:'processing',status:'delivered' })).status, 400);
+  assert.equal((await call(endpoint, b, { expectedStatus:'processing',status:'transit' })).data.order.status, 'transit');
+  assert.equal((await call(endpoint, b, { expectedStatus:'processing',status:'cancelled' })).status, 409);
+  const balanceBefore = (await call('/loyalty', a)).data.balance;
+  assert.equal((await call(endpoint, b, { expectedStatus:'transit',status:'cancelled' })).data.order.status, 'cancelled');
+  await call(endpoint, b, { expectedStatus:'transit',status:'cancelled' });
+  assert.equal((await call('/loyalty', a)).data.balance, balanceBefore - 137);
+  assert.equal((await call(endpoint, b, { expectedStatus:'cancelled',status:'processing' })).status, 400);
+  const customerOrder = (await call('/orders', a)).data.orders.find(item=>item.id===applied.data.order.id);
+  assert.equal(customerOrder.status, 'cancelled'); assert.equal(customerOrder.statusHistory.length, 2);
   const before = (await call('/loyalty', a)).data;
   await close(); server = createApi({ database }); await listen(); assert.deepEqual((await call('/loyalty', a)).data, before);
  } finally { await close(); await rm(directory, { recursive: true, force: true }); }
