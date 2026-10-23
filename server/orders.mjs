@@ -1,4 +1,5 @@
 import { ownCoupon, consumeCoupon, creditOrder } from './loyalty.mjs';
+import { resolveCoupon, consumePromotion } from './coupons.mjs';
 import { listProducts, setupProducts, moveStock } from './products.mjs';
 import { randomUUID } from 'node:crypto';
 import { calculateCart, shippingOptions } from '../src/utils/cartPricing.ts';
@@ -28,7 +29,7 @@ export function placeOrder(db, user, body) {
   const subtotal = items.reduce((sum, item) => sum + Math.round(item.price * 100) * item.quantity, 0);
   const delivery = shippingOptions(body.delivery.cep, subtotal).find(option => option.service === body.delivery.service);
   if (!delivery) invalid('CEP inválido para simular o frete.');
-  const reward = ownCoupon(db, user.id, body.coupon);
+  const reward = ownCoupon(db, user.id, body.coupon) || resolveCoupon(db,user.id,body.coupon);
   const totals = calculateCart(items, body.coupon || null, delivery, reward);
   if (body.coupon && !totals.validCoupon) invalid('O cupom não é válido para este pedido.');
   let checkout;
@@ -44,7 +45,8 @@ export function placeOrder(db, user, body) {
   try {
     moveStock(db, items, -1);
     order.stockReserved = true;
-    if (reward) consumeCoupon(db, user.id, reward.code, id);
+    if (reward?.code.startsWith('SP-')) consumeCoupon(db, user.id, reward.code, id);
+    else if (reward) consumePromotion(db,user.id,reward.code,order);
     order.pointsEarned = creditOrder(db, user.id, order);
     order.delivery = { ...delivery, price: totals.shipping };
     db.prepare('INSERT INTO orders VALUES (?, ?, ?, ?, ?)').run(id, user.id, body.requestKey, order.createdAt, JSON.stringify(order));

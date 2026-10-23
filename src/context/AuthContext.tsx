@@ -1,3 +1,5 @@
+import { CouponBenefit, Promotion, PromotionDraft } from '../data/coupons';
+import { ManagedUser, UserDraft, UserLog } from '../data/users';
 import { InventoryProduct } from '../data/inventory';
 import { AdminOrder, AdminOverview } from '../data/admin';
 import { Loyalty, LoyaltyCoupon } from '../data/loyalty';
@@ -10,9 +12,9 @@ import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 
 export type PilotCar = { id: string; model: string; engine: string; year: string; color: string; power: string; tune: string; exhaust: string; ignition: string };
-export type Pilot = { isAdmin?: boolean; deliveryAddress?: DeliveryAddress; id: string; name: string; surname: string; email: string; phone: string; photo: string | null; cars: PilotCar[]; activeCarId: string | null; address: string };
+export type Pilot = { canSupport?: boolean; isAdmin?: boolean; deliveryAddress?: DeliveryAddress; id: string; name: string; surname: string; email: string; phone: string; photo: string | null; cars: PilotCar[]; activeCarId: string | null; address: string };
 type Credentials = { email: string; password: string; remember: boolean; name?: string; surname?: string };
-type Auth = { productRequest: (path: string, method?: string, body?: unknown) => Promise<{ products: InventoryProduct[]; product: InventoryProduct }>; listAdminOrders: () => Promise<AdminOrder[]>; changeOrderStatus: (id: string, status: OrderStatus, expectedStatus: OrderStatus) => Promise<Order>; getAdminOverview: () => Promise<AdminOverview>; getLoyalty: () => Promise<Loyalty>; redeemReward: (rewardId: string, requestKey: string) => Promise<LoyaltyCoupon>; listTickets: () => Promise<SupportTicket[]>; getTicket: (id: string) => Promise<SupportTicket>; createTicket: (draft: TicketDraft, requestKey: string) => Promise<SupportTicket>; updateTicket: (id: string, values: { text?: string; requestKey?: string; status?: 'open' | 'closed' }) => Promise<SupportTicket>; listOrders: () => Promise<Order[]>; placeOrder: (items: { id: string; quantity: number }[], coupon: string | null, requestKey: string, delivery: ShippingChoice, checkout?: CheckoutDetails) => Promise<Order>; user: Pilot | null; loading: boolean; startupError: string; retry: () => Promise<void>; authenticate: (mode: 'login' | 'register', values: Credentials) => Promise<void>; update: (values: Partial<Omit<Pilot, 'id'>>) => Promise<void>; logout: () => Promise<void> };
+type Auth = { listCoupons: () => Promise<CouponBenefit[]>; listAdminCoupons: () => Promise<Promotion[]>; saveCoupon: (code: string | null, body: PromotionDraft) => Promise<Promotion>; listUsers: () => Promise<ManagedUser[]>; saveUser: (id: string | null, body: UserDraft) => Promise<ManagedUser>; userLogs: (id: string) => Promise<UserLog[]>; listAdminTickets: () => Promise<SupportTicket[]>; getAdminTicket: (id: string) => Promise<SupportTicket>; respondTicket: (id: string, values: { text: string; status: 'open' | 'closed'; requestKey: string; expectedUpdatedAt: string }) => Promise<SupportTicket>; productRequest: (path: string, method?: string, body?: unknown) => Promise<{ products: InventoryProduct[]; product: InventoryProduct }>; listAdminOrders: () => Promise<AdminOrder[]>; changeOrderStatus: (id: string, status: OrderStatus, expectedStatus: OrderStatus) => Promise<Order>; getAdminOverview: () => Promise<AdminOverview>; getLoyalty: () => Promise<Loyalty>; redeemReward: (rewardId: string, requestKey: string) => Promise<LoyaltyCoupon>; listTickets: () => Promise<SupportTicket[]>; getTicket: (id: string) => Promise<SupportTicket>; createTicket: (draft: TicketDraft, requestKey: string) => Promise<SupportTicket>; updateTicket: (id: string, values: { text?: string; requestKey?: string; status?: 'open' | 'closed' }) => Promise<SupportTicket>; listOrders: () => Promise<Order[]>; placeOrder: (items: { id: string; quantity: number }[], coupon: string | null, requestKey: string, delivery: ShippingChoice, checkout?: CheckoutDetails) => Promise<Order>; user: Pilot | null; loading: boolean; startupError: string; retry: () => Promise<void>; authenticate: (mode: 'login' | 'register', values: Credentials) => Promise<void>; update: (values: Partial<Omit<Pilot, 'id'>>) => Promise<void>; logout: () => Promise<void> };
 const Context = createContext<Auth | null>(null);
 const key = 'speedzone.session';
 const api = (Platform.OS === 'android' ? process.env.EXPO_PUBLIC_ANDROID_API_URL : undefined)
@@ -59,6 +61,15 @@ export function AuthProvider({ children }: PropsWithChildren) {
     }
     setUser(data.user);
   };
+  const listCoupons = useCallback(async (): Promise<CouponBenefit[]> => (await request('/coupons')).coupons, [request]);
+  const listAdminCoupons = useCallback(async (): Promise<Promotion[]> => (await request('/admin/coupons')).coupons, [request]);
+  const saveCoupon = async (code: string | null, body: PromotionDraft): Promise<Promotion> => (await request(code ? '/admin/coupons/'+code : '/admin/coupons', code ? 'PATCH' : 'POST', body)).coupon;
+  const listUsers = useCallback(async (): Promise<ManagedUser[]> => (await request('/admin/users')).users, [request]);
+  const saveUser = async (id: string | null, body: UserDraft): Promise<ManagedUser> => (await request(id ? '/admin/users/'+id : '/admin/users', id ? 'PATCH' : 'POST', body)).user;
+  const userLogs = useCallback(async (id: string): Promise<UserLog[]> => (await request('/admin/users/'+id+'/logs')).logs, [request]);
+  const listAdminTickets = useCallback(async (): Promise<SupportTicket[]> => (await request('/admin/support')).tickets, [request]);
+  const getAdminTicket = useCallback(async (id: string): Promise<SupportTicket> => (await request('/admin/support/' + encodeURIComponent(id))).ticket, [request]);
+  const respondTicket: Auth['respondTicket'] = async (id, values) => (await request('/admin/support/' + encodeURIComponent(id), 'PATCH', values)).ticket;
   const getLoyalty = useCallback(async (): Promise<Loyalty> => request('/loyalty'), [request]);
   const redeemReward = async (rewardId: string, requestKey: string): Promise<LoyaltyCoupon> => (await request('/loyalty/redeem', 'POST', { rewardId, requestKey })).coupon;
   const listAdminOrders = useCallback(async (): Promise<AdminOrder[]> => (await request('/admin/orders')).orders, [request]);
@@ -71,6 +82,6 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const createTicket = async (draft: TicketDraft, requestKey: string): Promise<SupportTicket> => (await request('/support/tickets', 'POST', { ...draft, requestKey })).ticket;
   const updateTicket = async (id: string, values: { text?: string; requestKey?: string; status?: 'open' | 'closed' }): Promise<SupportTicket> => (await request('/support/tickets/' + encodeURIComponent(id), 'PATCH', values)).ticket;
   const logout = async () => { await request('/auth/logout', 'POST', {}); if (Platform.OS !== 'web') await SecureStore.deleteItemAsync(key); token.current = null; setUser(null); };
-  return <Context.Provider value={{ productRequest: request, listAdminOrders, changeOrderStatus, getAdminOverview, getLoyalty, redeemReward, listTickets, getTicket, createTicket, updateTicket, listOrders, placeOrder, user, loading, startupError, retry, authenticate, update, logout }}>{children}</Context.Provider>;
+  return <Context.Provider value={{ listCoupons, listAdminCoupons, saveCoupon, listUsers, saveUser, userLogs, listAdminTickets, getAdminTicket, respondTicket, productRequest: request, listAdminOrders, changeOrderStatus, getAdminOverview, getLoyalty, redeemReward, listTickets, getTicket, createTicket, updateTicket, listOrders, placeOrder, user, loading, startupError, retry, authenticate, update, logout }}>{children}</Context.Provider>;
 }
 export function useAuth() { const context = useContext(Context); if (!context) throw new Error('AuthProvider is required'); return context; }

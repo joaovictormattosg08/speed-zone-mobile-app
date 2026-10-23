@@ -1,3 +1,4 @@
+import { useCoupons } from '../hooks/useCoupons';
 import { useCatalog } from '../context/CatalogContext';
 import { useLoyalty } from '../hooks/useLoyalty';
 import { useRef, useState } from 'react';
@@ -16,6 +17,8 @@ export default function CheckoutScreen() {
   const { products } = useCatalog();
   const params = useLocalSearchParams<{ coupon?: string; cep?: string; service?: string }>();
   const loyalty = useLoyalty();
+  const promotions = useCoupons();
+  const availableCoupons = [...(loyalty.data?.coupons || []), ...promotions.coupons];
   const { user, placeOrder } = useAuth();
   const { cart, removeItem } = useStore();
   const [step, setStep] = useState(1);
@@ -32,7 +35,7 @@ export default function CheckoutScreen() {
   const pending = useRef<{ signature: string; key: string } | null>(null);
   const scroll = useRef<ScrollView>(null);
   const items = products.filter(p => cart[p.id]).map(p => ({ ...p, quantity: cart[p.id] }));
-  const totals = calculateCart(items, params.coupon || null, delivery, loyalty.data?.coupons.find(item => item.code === params.coupon));
+  const totals = calculateCart(items, params.coupon || null, delivery, availableCoupons.find(item => item.code === params.coupon));
   function advance() {
     if (!savedCep || recipient.trim().length < 3 || address.trim().length < 10 || !delivery) { setError('Informe o destinatário, o endereço completo e selecione a entrega.'); return; }
     setError(''); setStep(step + 1); scroll.current?.scrollTo({ y: 0 });

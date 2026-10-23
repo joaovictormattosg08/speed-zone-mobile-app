@@ -1,0 +1,43 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { DatabaseSync } from 'node:sqlite';
+import { mkdtemp, rm, readFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { createApi } from './index.mjs';
+test('support replies: admin permissions, customer visibility, retry, conflicts and persistence', async () => {
+  const directory = await mkdtemp(join(tmpdir(),'sz-support-')); const database=join(directory,'test.sqlite');
+  let server=createApi({database});
+  const listen=()=>new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+  const close=()=>new Promise(resolve=>server.close(resolve)); await listen();
+  const call=async(path,method='GET',body,token)=>{const response=await fetch(`http://127.0.0.1:${server.address().port}${path}`,{method,headers:{'Content-Type':'application/json',...(token?{Authorization:`Bearer ${token}`}:{})},...(body?{body:JSON.stringify(body)}:{})});return {status:response.status,...await response.json()};};
+  try {
+    const register=email=>call('/auth/register','POST',{name:'Teste',surname:'Suporte',email,password:'TesteSenha123!'});
+    const owner=await register('pilot@example.com'), admin=await register('admin@example.com'), other=await register('other@example.com');
+    const db=new DatabaseSync(database);db.prepare('INSERT INTO administrators VALUES (?, ?)').run(admin.user.id,new Date().toISOString());db.close();
+    const attachment='data:image/png;base64,'+(await readFile(new URL('../assets/icon.png',import.meta.url))).toString('base64');
+    const created=await call('/support/tickets','POST',{name:'Piloto Teste',email:'pilot@example.com',category:'fitment',description:'Preciso confirmar a aplicação desta peça no meu projeto.',vehicleId:null,attachment,requestKey:'support-create-test'},owner.token);
+    assert.equal(created.status,201); const id=created.ticket.id; const path='/admin/support/'+id;
+    assert.equal((await call('/admin/support')).status,401);
+    assert.equal((await call('/admin/support','GET',undefined,owner.token)).status,403);
+    assert.equal((await call(path,'GET',undefined,other.token)).status,403);
+    assert.equal((await call('/support/tickets/'+id,'GET',undefined,other.token)).status,404);
+    assert.equal((await call(path,'GET',undefined,admin.token)).ticket.attachment,attachment);
+    const body={text:'Informe o ano e a motorização para confirmarmos a aplicação.',status:'open',requestKey:'support-reply-001',expectedUpdatedAt:created.ticket.updatedAt};
+    assert.equal((await call(path,'PATCH',body,owner.token)).status,403);
+    const response=await call(path,'PATCH',body,admin.token);assert.equal(response.status,200);
+    assert.equal(response.ticket.messages[0].author,'team');assert.equal(response.ticket.messages[0].authorName,'Teste Suporte');
+    assert.equal((await call(path,'PATCH',body,admin.token)).ticket.messages.length,1);
+    assert.equal((await call('/support/tickets/'+id,'GET',undefined,owner.token)).ticket.messages[0].text,body.text);
+    assert.equal((await call(path,'PATCH',{...body,requestKey:'stale-reply-001'},admin.token)).status,409);
+    const closed=await call(path,'PATCH',{...body,text:'Atendimento concluído.',status:'closed',requestKey:'close-reply-001',expectedUpdatedAt:response.ticket.updatedAt},admin.token);
+    assert.equal(closed.ticket.status,'closed');
+    assert.equal((await call('/support/tickets/'+id,'PATCH',{text:'Nova mensagem',requestKey:'pilot-reply-001'},owner.token)).status,400);
+    await call('/support/tickets/'+id,'PATCH',{status:'open'},owner.token);
+    const pilot=await call('/support/tickets/'+id,'PATCH',{text:'Obrigado, vou enviar os dados.',requestKey:'pilot-reply-001',author:'team'},owner.token);
+    assert.equal(pilot.ticket.messages.at(-1).author,'pilot');
+    assert.equal((await call('/admin/support','GET',undefined,admin.token)).tickets[0].messages.at(-1).text,'Obrigado, vou enviar os dados.');
+    await close();server=createApi({database});await listen();
+    assert.equal((await call(path,'GET',undefined,admin.token)).ticket.messages.length,3);
+  } finally {await close();await rm(directory,{recursive:true,force:true});}
+});

@@ -1,0 +1,50 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { DatabaseSync } from 'node:sqlite';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { createApi } from './index.mjs';
+
+test('promotions: permissions, rules, exclusive accounts, quotas, retries and persistence', async () => {
+ const directory=await mkdtemp(join(tmpdir(),'sz-coupons-')), database=join(directory,'test.sqlite');
+ let server=createApi({database});
+ const listen=()=>new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+ const close=()=>new Promise(resolve=>server.close(resolve));
+ await listen();
+ const call=async(path,method='GET',body,token)=>{const res=await fetch(`http://127.0.0.1:${server.address().port}${path}`,{method,headers:{'Content-Type':'application/json',...(token?{Authorization:`Bearer ${token}`}:{})},...(body?{body:JSON.stringify(body)}:{})});return {status:res.status,...await res.json()};};
+ try {
+  const register=email=>call('/auth/register','POST',{name:'Coupon',surname:'Tester',email,password:'TestingPassword123!'});
+  const admin=await register('promo@example.com'), other=await register('other@example.com');
+  assert.equal((await call('/admin/coupons')).status,401);
+  assert.equal((await call('/admin/coupons','POST',{},other.token)).status,403);
+  const db=new DatabaseSync(database);db.prepare('INSERT INTO administrators VALUES (?,?)').run(admin.user.id,new Date().toISOString());db.close();
+  const draft={code:'TEST10',label:'Test campaign',kind:'percent',value:10,minimum:0,limit:1,expires:'',paused:false,archived:false,ownerEmail:'',revision:0};
+  const create=body=>call('/admin/coupons','POST',{...draft,...body},admin.token);
+  const created=await create({});assert.equal(created.status,201);
+  assert.equal((await create({})).status,409);
+  assert.equal((await create({code:'SP-RESERVED'})).status,400);
+  assert.equal((await create({code:'INVALID',expires:'2027-02-30'})).status,400);
+  const paused=await call('/admin/coupons/TEST10','PATCH',{...created.coupon,paused:true},admin.token);
+  assert.equal(paused.coupon.state,'paused');
+  assert.equal((await call('/admin/coupons/TEST10','PATCH',created.coupon,admin.token)).status,409);
+  const purchase={items:[{id:'SZ-ACC-015',quantity:1}],delivery:{cep:'01310100',service:'standard'},coupon:'TEST10',requestKey:'promo-order-test-1'};
+  assert.equal((await call('/orders','POST',purchase,admin.token)).status,400);
+  await call('/admin/coupons/TEST10','PATCH',{...paused.coupon,paused:false},admin.token);
+  const order=await call('/orders','POST',purchase,admin.token);assert.equal(order.status,201);assert.equal(order.order.discount,1450);
+  assert.equal((await call('/orders','POST',purchase,admin.token)).order.id,order.order.id);
+  assert.equal((await call('/orders','POST',{...purchase,requestKey:'promo-order-test-2'},admin.token)).status,400);
+  assert.equal((await call('/orders','POST',purchase,other.token)).status,400);
+  assert.equal((await call('/admin/coupons','GET',undefined,admin.token)).coupons.find(p=>p.code==='TEST10').used,1);
+  await create({code:'EXCLUSIVE',kind:'fixed',value:500,ownerEmail:'other@example.com'});
+  assert.ok(!(await call('/coupons','GET',undefined,admin.token)).coupons.some(p=>p.code==='EXCLUSIVE'));
+  assert.equal((await call('/orders','POST',{...purchase,coupon:'EXCLUSIVE',requestKey:'exclusive-wrong-account'},admin.token)).status,400);
+  const fixed=await call('/orders','POST',{...purchase,coupon:'EXCLUSIVE',requestKey:'exclusive-right-account'},other.token);assert.equal(fixed.status,201);assert.equal(fixed.order.discount,500);
+  await create({code:'FREEDELIVERY',kind:'shipping',value:100});
+  const free=await call('/orders','POST',{...purchase,coupon:'FREEDELIVERY',requestKey:'free-delivery-promo'},admin.token);assert.equal(free.status,201);assert.equal(free.order.shipping,0);assert.equal(free.order.discount,0);
+  await create({code:'MINIMUM',minimum:100000});
+  assert.equal((await call('/orders','POST',{...purchase,coupon:'MINIMUM',requestKey:'minimum-promo-test'},admin.token)).status,400);
+  await close();server=createApi({database});await listen();
+  const persisted=(await call('/admin/coupons','GET',undefined,admin.token)).coupons.find(p=>p.code==='TEST10');assert.equal(persisted.used,1);assert.equal(persisted.state,'exhausted');
+ } finally {await close();await rm(directory,{recursive:true,force:true});}
+});

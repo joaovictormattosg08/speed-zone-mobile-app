@@ -1,0 +1,46 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { DatabaseSync } from 'node:sqlite';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { createApi } from './index.mjs';
+test('user management: roles, session revocation, isolation, persistence and audit',async()=>{
+ const directory=await mkdtemp(join(tmpdir(),'sz-users-')),database=join(directory,'test.sqlite');let server=createApi({database});
+ const listen=()=>new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));const close=()=>new Promise(resolve=>server.close(resolve));await listen();
+ const call=async(path,method='GET',body,token)=>{const res=await fetch(`http://127.0.0.1:${server.address().port}${path}`,{method,headers:{'Content-Type':'application/json',...(token?{Authorization:`Bearer ${token}`}:{})},...(body?{body:JSON.stringify(body)}:{})});return {status:res.status,...await res.json()};};
+ try{
+  const credentials={name:'Admin',surname:'Teste',email:'admin@example.com',password:'SenhaTeste123!'};
+  const admin=await call('/auth/register','POST',credentials);
+  assert.equal((await call('/admin/users','GET',undefined,admin.token)).status,403);
+  const db=new DatabaseSync(database);db.prepare('INSERT INTO administrators VALUES (?,?)').run(admin.user.id,new Date().toISOString());db.close();
+  const draft={name:'Equipe',surname:'Técnica',email:'tech@example.com',phone:'',password:'SenhaTeste123!',role:'technician',blocked:false,archived:false,reason:'',revision:1};
+  const created=await call('/admin/users','POST',draft,admin.token);assert.equal(created.status,201);assert.equal(created.user.role,'technician');
+  assert.ok(!JSON.stringify(created).includes('SenhaTeste'));assert.ok(created.user.createdAt);
+  assert.equal((await call('/admin/users','POST',draft,admin.token)).status,409);
+  const tech=await call('/auth/login','POST',draft);assert.equal(tech.user.canSupport,true);assert.equal(tech.user.isAdmin,false);
+  assert.equal((await call('/admin/support','GET',undefined,tech.token)).status,200);
+  assert.equal((await call('/admin/users','GET',undefined,tech.token)).status,403);
+  assert.equal((await call('/admin/products','GET',undefined,tech.token)).status,403);
+  assert.equal((await call('/admin/users','POST',{...draft,email:'evil@example.com',role:'admin'},tech.token)).status,403);
+  await call('/me','PATCH',{role:'admin',isAdmin:true,canSupport:true},tech.token);
+  assert.equal((await call('/admin/users','GET',undefined,tech.token)).status,403);
+  const path='/admin/users/'+created.user.id;
+  const blocked=await call(path,'PATCH',{...created.user,blocked:true,reason:'Bloqueio de teste'},admin.token);assert.equal(blocked.status,200);
+  assert.equal((await call('/me','GET',undefined,tech.token)).status,401);
+  assert.equal((await call('/auth/login','POST',draft)).status,403);
+  assert.equal((await call(path,'PATCH',created.user,admin.token)).status,409);
+  const unblocked=await call(path,'PATCH',{...blocked.user,blocked:false,role:'customer'},admin.token);assert.equal(unblocked.status,200);
+  const customer=await call('/auth/login','POST',draft);assert.equal(customer.user.canSupport,false);
+  assert.equal((await call('/admin/support','GET',undefined,customer.token)).status,403);
+  const archived=await call(path,'PATCH',{...unblocked.user,archived:true,reason:'Desativação de teste'},admin.token);assert.equal(archived.status,200);
+  assert.equal((await call('/auth/login','POST',draft)).status,403);
+  assert.equal((await call('/me','GET',undefined,customer.token)).status,401);
+  assert.equal((await call(path+'/logs','GET',undefined,admin.token)).logs.length,4);
+  const me=(await call('/admin/users','GET',undefined,admin.token)).users.find(u=>u.id===admin.user.id);
+  assert.equal((await call('/admin/users/'+me.id,'PATCH',{...me,role:'customer'},admin.token)).status,400);
+  assert.equal((await call('/admin/users/'+me.id,'PATCH',{...me,blocked:true,reason:'Teste'},admin.token)).status,400);
+  await close();server=createApi({database});await listen();
+  assert.equal((await call('/admin/users','GET',undefined,admin.token)).users.find(u=>u.id===created.user.id).archived,true);
+ }finally{await close();await rm(directory,{recursive:true,force:true});}
+});

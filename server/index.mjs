@@ -1,3 +1,5 @@
+import { setupCoupons, listCoupons, saveCoupon, customerCoupons } from './coupons.mjs';
+import { setupUsers, listUsers, createUser, updateUser, userLogs, canSupport, restricted } from './users.mjs';
 import { listProducts, saveProduct, setupProducts } from './products.mjs';
 import { listAdminOrders, changeOrderStatus } from './admin-orders.mjs';
 import { setupAdmin, isAdmin, adminOverview } from './admin.mjs';
@@ -11,7 +13,7 @@ import { mkdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { setupOrders, listOrders, placeOrder } from './orders.mjs';
-import { setupSupport, listTickets, getTicket, createTicket, updateTicket } from './support.mjs';
+import { setupSupport, listTickets, getTicket, createTicket, updateTicket, listAdminTickets, getAdminTicket, respondTicket } from './support.mjs';
 
 const derive = promisify(scrypt);
 const digest = value => createHash('sha256').update(value).digest('hex');
@@ -36,8 +38,10 @@ export function createApi({ database = resolve('server/data/speedzone.sqlite') }
   setupLoyalty(db);
   setupSupport(db);
   setupProducts(db);
+  setupUsers(db);
+  setupCoupons(db);
   const attempts = new Map();
-  const publicUser = row => ({ ...JSON.parse(row.profile), id: row.id, email: row.email, isAdmin: isAdmin(db, row.id) });
+  const publicUser = row => ({ ...JSON.parse(row.profile), id: row.id, email: row.email, isAdmin: isAdmin(db, row.id), canSupport: canSupport(db,row.id) });
   const server = createServer(async (req, res) => {
     res.setHeader('Content-Type', 'application/json; charset=utf-8');
     res.setHeader('Cache-Control', 'no-store');
@@ -82,6 +86,7 @@ export function createApi({ database = resolve('server/data/speedzone.sqlite') }
           const candidate = await derive(body.password, salt, 64);
           if (!row || !timingSafeEqual(candidate, Buffer.from(hash, 'hex'))) fail('E-mail ou senha incorretos.', 401);
         }
+        if (restricted(db,row.id)) fail('Conta bloqueada ou desativada. Entre em contato com o atendimento.',403);
         const token = randomBytes(32).toString('hex');
         db.prepare('DELETE FROM sessions WHERE expires < ?').run(Date.now());
         db.prepare('INSERT INTO sessions VALUES (?, ?, ?)').run(digest(token), row.id, Date.now() + (body.remember ? 30 : 1) * 86400000);
@@ -91,8 +96,24 @@ export function createApi({ database = resolve('server/data/speedzone.sqlite') }
       const token = req.headers.authorization?.replace(/^Bearer /, '') || req.headers.cookie?.match(/(?:^|; )speedzone_session=([a-f0-9]+)/)?.[1] || '';
       const row = db.prepare('SELECT users.* FROM sessions JOIN users ON users.id = sessions.user_id WHERE sessions.hash = ? AND expires > ?').get(digest(token), Date.now());
       if (!row) fail('Entre na sua conta para continuar.', 401);
+      if (restricted(db,row.id)) fail('Conta indisponível. Entre novamente.',401);
+      if (path === '/coupons' && req.method === 'GET') return send({ coupons:customerCoupons(db,row.id) });
       if (path?.startsWith('/admin')) {
-        if (!isAdmin(db, row.id)) fail('Acesso restrito a administradores.', 403);
+        const supportRoute = path === '/admin/support' || path.startsWith('/admin/support/');
+        if (!(supportRoute ? canSupport(db,row.id) : isAdmin(db,row.id))) fail('Acesso restrito à equipe autorizada.', 403);
+        if (path === '/admin/coupons' && req.method === 'GET') return send({ coupons:listCoupons(db) });
+        if (path === '/admin/coupons' && req.method === 'POST') return send({ coupon:saveCoupon(db,body) },201);
+        const promoCode=path.match(/^\/admin\/coupons\/([A-Z0-9-]+)$/)?.[1];
+        if (promoCode && req.method === 'PATCH') return send({ coupon:saveCoupon(db,body,promoCode) });
+        if (path === '/admin/users' && req.method === 'GET') return send({ users: listUsers(db) });
+        if (path === '/admin/users' && req.method === 'POST') return send({ user: await createUser(db,row.id,body) },201);
+        const managedId=path.match(/^\/admin\/users\/([a-f0-9-]{36})(\/logs)?$/);
+        if (managedId?.[2] && req.method === 'GET') return send({ logs:userLogs(db,managedId[1]) });
+        if (managedId && !managedId[2] && req.method === 'PATCH') return send({ user:updateUser(db,row.id,managedId[1],body) });
+        if (path === '/admin/support' && req.method === 'GET') return send({ tickets: listAdminTickets(db) });
+        const ticketId = path.match(/^\/admin\/support\/(TK-[A-F0-9]{8})$/)?.[1];
+        if (ticketId && req.method === 'GET') return send({ ticket: getAdminTicket(db, ticketId) });
+        if (ticketId && req.method === 'PATCH') return send({ ticket: respondTicket(db, row, ticketId, body) });
         if (path === '/admin/products' && req.method === 'GET') return send({ products: listProducts(db, true) });
         if (path === '/admin/products' && req.method === 'POST') return send({ product: saveProduct(db, body) }, 201);
         const productId = path.match(/^\/admin\/products\/([A-Z0-9-]+)$/)?.[1];
@@ -144,7 +165,7 @@ export function createApi({ database = resolve('server/data/speedzone.sqlite') }
         if (profile.activeCarId !== null && !profile.cars.some(car => car.id === profile.activeCarId)) fail('Projeto ativo inválido.');
         const email = 'email' in body ? emailOf(body.email) : row.email;
         try { db.prepare('UPDATE users SET email = ?, profile = ? WHERE id = ?').run(email, JSON.stringify(profile), row.id); } catch (error) { if (String(error).includes('UNIQUE')) fail('Este e-mail já está cadastrado.', 409); throw error; }
-        return send({ user: { ...profile, id: row.id, email, isAdmin: isAdmin(db, row.id) } });
+        return send({ user: { ...profile, id: row.id, email, isAdmin: isAdmin(db, row.id), canSupport: canSupport(db,row.id) } });
       }
       fail('Rota não encontrada.', 404);
     } catch (error) { send({ error: error.status ? error.message : 'Não foi possível concluir a operação.' }, error.status || 500); }

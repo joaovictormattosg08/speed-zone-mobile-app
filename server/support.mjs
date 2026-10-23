@@ -49,7 +49,7 @@ export function updateTicket(db, userId, id, body) {
   const ticket = getTicket(db, userId, id);
   if ('text' in body) {
     const key = requestKey(body.requestKey);
-    if (ticket.messages.some(message => message.id === key)) return ticket;
+    if (ticket.messages.some(message => message.id === key && message.author === 'pilot')) return ticket;
     if (ticket.status === 'closed') fail('Reabra o chamado para adicionar uma mensagem.');
     if (ticket.messages.length >= 100) fail('Limite de 100 mensagens atingido para este chamado.');
     ticket.messages.push({ id: key, author: 'pilot', text: text(body.text, 'Mensagem', 1, 2000), createdAt: new Date().toISOString() });
@@ -57,5 +57,28 @@ export function updateTicket(db, userId, id, body) {
   else fail('Atualização inválida.');
   ticket.updatedAt = new Date().toISOString();
   db.prepare('UPDATE support_tickets SET payload = ?, updated_at = ? WHERE id = ? AND user_id = ?').run(JSON.stringify(ticket), ticket.updatedAt, id, userId);
+  return ticket;
+}
+export function listAdminTickets(db) {
+  return db.prepare('SELECT payload FROM support_tickets ORDER BY updated_at DESC').all().map(row => ({ ...JSON.parse(row.payload), attachment: null }));
+}
+export function getAdminTicket(db, id) {
+  const row = db.prepare('SELECT payload FROM support_tickets WHERE id = ?').get(id);
+  if (!row) fail('Chamado não encontrado.', 404);
+  return JSON.parse(row.payload);
+}
+export function respondTicket(db, actor, id, body) {
+  const ticket = getAdminTicket(db, id);
+  const key = requestKey(body.requestKey);
+  if (ticket.messages.some(message => message.id === key && message.author === 'team' && message.actorId === actor.id)) return ticket;
+  if (body.expectedUpdatedAt !== ticket.updatedAt) fail('O chamado recebeu uma atualização. Confira o histórico e envie novamente.', 409);
+  if (!['open', 'closed'].includes(body.status)) fail('Status de chamado inválido.');
+  const message = text(body.text, 'Resposta', 1, 2000);
+  if (ticket.messages.length >= 100) fail('Limite de 100 mensagens atingido para este chamado.');
+  const profile = JSON.parse(actor.profile);
+  ticket.messages.push({ id:key, author:'team', actorId:actor.id, authorName:`${profile.name} ${profile.surname}`.trim(), text:message, createdAt:new Date().toISOString() });
+  ticket.status = body.status;
+  ticket.updatedAt = new Date(Math.max(Date.now(), Date.parse(ticket.updatedAt) + 1)).toISOString();
+  db.prepare('UPDATE support_tickets SET payload = ?, updated_at = ? WHERE id = ?').run(JSON.stringify(ticket),ticket.updatedAt,id);
   return ticket;
 }

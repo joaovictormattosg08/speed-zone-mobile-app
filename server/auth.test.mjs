@@ -77,9 +77,10 @@ test('accounts, sessions, profile isolation and persistence', async () => {
     assert.equal(placed.data.order.address, purchase.checkout.address);
     assert.deepEqual(placed.data.order.checkout, purchase.checkout);
     assert.equal((await call('/orders', 'POST', { ...purchase, requestKey: 'bad-checkout-123', checkout: { ...purchase.checkout, address: '' } }, token)).status, 400);
-    const economy = await call('/orders', 'POST', { ...purchase, requestKey: 'economy-delivery', delivery: { cep: '01310100', service: 'standard', price: 1 } }, token);
-    assert.equal(economy.data.order.shipping, 3990); assert.equal(economy.data.order.total, 538500);
-    const free = await call('/orders', 'POST', { ...purchase, requestKey: 'free-delivery', items: [{ id: 'SZ-TUR-660-TS', quantity: 1 }] }, token);
+    assert.equal((await call('/orders', 'POST', { ...purchase, requestKey: 'coupon-reused' }, token)).status, 400);
+    const economy = await call('/orders', 'POST', { ...purchase, coupon: null, requestKey: 'economy-delivery', delivery: { cep: '01310100', service: 'standard', price: 1 } }, token);
+    assert.equal(economy.data.order.shipping, 3990); assert.equal(economy.data.order.total, 597890);
+    const free = await call('/orders', 'POST', { ...purchase, coupon: null, requestKey: 'free-delivery', items: [{ id: 'SZ-TUR-660-TS', quantity: 1 }] }, token);
     assert.equal(free.data.order.shipping, 0);
     const ticketBody = { requestKey: 'ticket-create-123', name: 'Ana Maria', email: 'ana@example.com', category: 'fitment', vehicleId: car.id, description: 'Preciso confirmar a compatibilidade desta turbina com meu projeto.', attachment: photo, orderId: placed.data.order.id };
     const opened = await call('/support/tickets', 'POST', ticketBody, token);
