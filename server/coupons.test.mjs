@@ -44,6 +44,12 @@ test('promotions: permissions, rules, exclusive accounts, quotas, retries and pe
   const free=await call('/orders','POST',{...purchase,coupon:'FREEDELIVERY',requestKey:'free-delivery-promo'},admin.token);assert.equal(free.status,201);assert.equal(free.order.shipping,0);assert.equal(free.order.discount,0);
   await create({code:'MINIMUM',minimum:100000});
   assert.equal((await call('/orders','POST',{...purchase,coupon:'MINIMUM',requestKey:'minimum-promo-test'},admin.token)).status,400);
+  await create({code:'CATEGORY',kind:'percent',value:50,maximum:1000,categories:['Admissão'],limit:0});
+  const restricted=await call('/orders','POST',{...purchase,coupon:'CATEGORY',requestKey:'category-cap-check'},admin.token);
+  assert.equal(restricted.status,201);assert.equal(restricted.order.discount,1000);
+  assert.equal((await call('/orders','POST',{...purchase,coupon:'CATEGORY',requestKey:'category-wrong-check',items:[{id:'SZ-ELT-220',quantity:1}]},other.token)).status,400);
+  const shared=await call('/orders','POST',{...purchase,coupon:'CATEGORY',requestKey:'category-second-check'},other.token);assert.equal(shared.status,201);
+  assert.equal((await call('/admin/coupons','GET',undefined,admin.token)).coupons.find(p=>p.code==='CATEGORY').state,'active');
   await close();server=createApi({database});await listen();
   const persisted=(await call('/admin/coupons','GET',undefined,admin.token)).coupons.find(p=>p.code==='TEST10');assert.equal(persisted.used,1);assert.equal(persisted.state,'exhausted');
  } finally {await close();await rm(directory,{recursive:true,force:true});}

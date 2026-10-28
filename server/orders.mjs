@@ -22,7 +22,7 @@ export function placeOrder(db, user, body) {
     const product = catalog.find(product => product.id === item?.id);
     if (!product || !Number.isInteger(item.quantity) || item.quantity < 1 || item.quantity > product.stock || ids.has(item.id)) invalid('Produto indisponível ou quantidade acima do estoque.');
     ids.add(item.id);
-    return { id: product.id, name: product.name, price: product.price, quantity: item.quantity };
+    return { id: product.id, name: product.name, category: product.category, price: product.price, quantity: item.quantity };
   });
   if (body.coupon != null && typeof body.coupon !== 'string') invalid('Cupom inválido.');
   if (!body.delivery || typeof body.delivery.cep !== 'string' || !['standard', 'express'].includes(body.delivery.service)) invalid('Calcule o frete e escolha uma opção de entrega.');

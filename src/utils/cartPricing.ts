@@ -14,22 +14,24 @@ export function shippingOptions(cep: string, subtotal: number): ShippingOption[]
     { cep, service: 'express', label: 'Entrega Express', price: free ? 0 : SHIPPING_CENTS + zone * 2000, days: `${2 + zone}–${3 + zone} dias úteis` },
   ];
 }
-export function couponError(code: string, subtotal: number, reward?: CouponBenefit | null): string | null {
+export function couponError(code: string, subtotal: number, reward?: CouponBenefit | null, lines?: {category?:string}[]): string | null {
   if (!code) return 'Digite um código de cupom.';
   if (!reward || reward.code !== code) return 'Cupom não encontrado ou indisponível para esta conta.';
   if (reward.usedOrder) return 'Este cupom já foi utilizado nesta conta.';
   if (reward.unavailableReason) return reward.unavailableReason;
+  if (reward.categories?.length && lines && !lines.some(item=>reward.categories!.includes(item.category||''))) return 'Este cupom não se aplica às categorias do carrinho.';
   if (subtotal === 0) return 'Adicione produtos antes de aplicar um cupom.';
   if (subtotal < (reward.minimum || 0)) return `Pedido mínimo: ${((reward.minimum || 0) / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}.`;
   return null;
 }
-export function calculateCart(lines: { price: number; oldPrice?: number; quantity: number }[], coupon: string | null, delivery?: ShippingChoice | null, reward?: CouponBenefit | null) {
+export function calculateCart(lines: { category?:string; price: number; oldPrice?: number; quantity: number }[], coupon: string | null, delivery?: ShippingChoice | null, reward?: CouponBenefit | null) {
   const subtotal = lines.reduce((sum, item) => sum + Math.round(item.price * 100) * item.quantity, 0);
-  const validCoupon = coupon && !couponError(coupon, subtotal, reward) ? coupon : null;
-  const discount = validCoupon && reward ? Math.min(subtotal, reward.fixedCents || Math.round(subtotal * reward.percent / 100)) : 0;
+  const validCoupon = coupon && !couponError(coupon, subtotal, reward, lines) ? coupon : null;
+  const eligible = lines.filter(item=>!reward?.categories?.length||reward.categories.includes(item.category||'')).reduce((sum,item)=>sum+Math.round(item.price*100)*item.quantity,0);
+  const discount = validCoupon && reward ? Math.min(eligible, reward.maximum || Infinity, reward.fixedCents || Math.round(eligible * reward.percent / 100)) : 0;
   const selectedShipping = delivery ? shippingOptions(delivery.cep, subtotal).find(option => option.service === delivery.service) : undefined;
   const baseShipping = delivery === undefined ? (subtotal === 0 || subtotal >= FREE_SHIPPING_CENTS ? 0 : SHIPPING_CENTS) : selectedShipping?.price ?? 0;
-  const shipping = validCoupon && reward ? reward.freeShipping ? 0 : Math.max(0, baseShipping - Math.round(baseShipping * (reward.shippingPercent || 0) / 100)) : baseShipping;
+  const shipping = validCoupon && reward ? reward.freeShipping ? 0 : Math.max(0, baseShipping - Math.min(reward.maximum || Infinity, Math.round(baseShipping * (reward.shippingPercent || 0) / 100))) : baseShipping;
   const savings = lines.reduce((sum, item) => sum + Math.max(0, Math.round((item.oldPrice ?? item.price) * 100) - Math.round(item.price * 100)) * item.quantity, 0) + discount;
   return { subtotal, discount, shipping, savings, total: subtotal - discount + shipping, validCoupon, remaining: Math.max(0, FREE_SHIPPING_CENTS - subtotal), progress: Math.min(100, Math.floor(subtotal / FREE_SHIPPING_CENTS * 100)) };
 }

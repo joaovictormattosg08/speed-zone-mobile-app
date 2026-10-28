@@ -33,11 +33,11 @@ export default function CartScreen() {
   const items = products.filter(item => cart[item.id]).map(item => ({ ...item, quantity: cart[item.id] }));
   const totals = calculateCart(items, coupon, delivery, availableCoupons.find(item => item.code === coupon));
   const selectedShipping = delivery ? shippingOptions(delivery.cep, totals.subtotal).find(option => option.service === delivery.service) : undefined;
-  const invalidatedCoupon = coupon ? couponError(coupon, totals.subtotal, availableCoupons.find(item => item.code === coupon)) : null;
+  const invalidatedCoupon = coupon ? couponError(coupon, totals.subtotal, availableCoupons.find(item => item.code === coupon), items) : null;
   const empty = items.length === 0 || previewEmpty;
   function apply(value = code) {
     const normalized = value.trim().toUpperCase();
-    const message = couponError(normalized, totals.subtotal, availableCoupons.find(item => item.code === normalized));
+    const message = couponError(normalized, totals.subtotal, availableCoupons.find(item => item.code === normalized), items);
     setCode(normalized);
     if (message) { setError(message); return; }
     setCoupon(normalized); setError(''); setSheet(null);
