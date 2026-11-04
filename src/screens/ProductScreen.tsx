@@ -1,3 +1,4 @@
+import { CatalogStatus } from '../components/CatalogStatus';
 import { useCatalog } from '../context/CatalogContext';
 import { PilotAvatar } from '../components/PilotAvatar';
 import { ComponentProps, PropsWithChildren, useEffect, useState } from 'react';
@@ -8,6 +9,7 @@ import * as Clipboard from 'expo-clipboard';
 import { StoreIcon } from '../components/StoreHeader';
 import { DEMO_STOCK, useStore } from '../context/StoreContext';
 import { getProductDetails } from '../data/productDetails';
+import { shippingOptions } from '../utils/cartPricing';
 import { money } from '../data/products';
 import { colors as c, fonts as f } from '../theme/tokens';
 
@@ -23,12 +25,11 @@ function Accordion({ title, icon, color = blue, initiallyOpen = false, children 
 }
 
 export default function ProductScreen({ id }: { id: string }) {
-  const { products } = useCatalog();
+  const { products, loading: catalogLoading, error: catalogError } = useCatalog();
   const product = products.find(item => item.id === id);
   const { cart, add, favorites, toggleFavorite } = useStore();
   const [slide, setSlide] = useState(0);
   const [quantity, setQuantity] = useState(1);
-  const [available, setAvailable] = useState(true);
   const [cep, setCep] = useState('');
   const [shipping, setShipping] = useState(false);
   const [cepError, setCepError] = useState('');
@@ -39,12 +40,13 @@ export default function ProductScreen({ id }: { id: string }) {
     return () => clearTimeout(timeout);
   }, [feedback]);
   function back() { if (router.canGoBack()) router.back(); else router.replace('/(main)/catalog'); }
+  if (!product && (catalogLoading || catalogError)) return <SafeAreaView style={s.safe}><View style={s.notFound}><CatalogStatus/><Pressable accessibilityRole="button" onPress={back} style={s.buy}><Text style={s.buyText}>Voltar</Text></Pressable></View></SafeAreaView>;
   if (!product) return <SafeAreaView style={s.safe}><View style={s.notFound}><StoreIcon name="package-variant" size={48} /><Text style={s.title}>Peça não encontrada</Text><Text style={s.body}>Este produto não está disponível no catálogo.</Text><Pressable accessibilityRole="button" onPress={() => router.replace('/(main)/catalog')} style={s.buy}><Text style={s.buyText}>Voltar ao Catálogo</Text></Pressable></View></SafeAreaView>;
 
   const details = getProductDetails(product);
   const remaining = Math.max(0, (product.stock ?? DEMO_STOCK) - (cart[id] ?? 0));
   const selectedQuantity = Math.min(quantity, Math.max(1, remaining));
-  const inStock = available && (product.stock ?? DEMO_STOCK) > 0;
+  const inStock = (product.stock ?? DEMO_STOCK) > 0;
   const canAdd = inStock && remaining > 0;
   const favorite = favorites.includes(id);
   const cardPrice = product.id === 'SZ-TUR-660-TS' ? product.price / 0.95 : product.price;
@@ -70,7 +72,7 @@ export default function ProductScreen({ id }: { id: string }) {
     setQuantity(1);
   }
   function calculateShipping() {
-    if (cep.replace(/\D/g, '').length !== 8) { setCepError('Informe um CEP com 8 dígitos.'); setShipping(false); return; }
+    if (!shippingOptions(cep.replace(/\D/g, ''), 0).length) { setCepError('Informe um CEP com 8 dígitos.'); setShipping(false); return; }
     setCepError(''); setShipping(true);
   }
   return <SafeAreaView edges={['top', 'left', 'right']} style={s.safe}>
@@ -83,9 +85,9 @@ export default function ProductScreen({ id }: { id: string }) {
     <KeyboardAvoidingView style={s.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={s.scroll}>
         <View style={s.toolbar}><Pressable accessibilityRole="button" onPress={() => router.navigate('/(main)/catalog')} style={s.backCatalog}><StoreIcon name="chevron-left" color={blue} size={21} /><Text style={s.catalogText}>Voltar ao Catálogo</Text></Pressable><Pressable accessibilityRole="button" accessibilityLabel="Compartilhar produto" onPress={shareProduct} style={s.toolButton}><StoreIcon name="share-variant-outline" color={c.text} size={20} /></Pressable><Pressable accessibilityRole="button" accessibilityLabel={favorite ? 'Remover dos favoritos' : 'Favoritar produto'} accessibilityState={{ selected: favorite }} onPress={() => toggleFavorite(id)} style={s.toolButton}><StoreIcon name={favorite ? 'heart' : 'heart-outline'} color={favorite ? c.error : c.text} size={21} /></Pressable></View>
-        <View style={s.content}>
+        <View style={s.content}><CatalogStatus/>
           <View style={s.gallery}>
-            <Image source={details.gallery[slide].image} accessibilityLabel={details.gallery[slide].label} style={s.mainImage} resizeMode="cover" />
+            <Image source={(details.gallery[slide] || details.gallery[0]).image} accessibilityLabel={(details.gallery[slide] || details.gallery[0]).label} style={s.mainImage} resizeMode="cover" />
             <View pointerEvents="none" style={s.imageBadges}><View style={s.original}><StoreIcon name="check-decagram-outline" color={c.onPrimary} size={12} /><Text style={s.originalText}>{details.seal}</Text></View><View style={s.stage}><Text style={s.stageText}>{details.stage}</Text></View></View>
             <View style={s.counter}><Text style={s.counterText}><Text style={{ color: c.primary }}>{slide + 1}</Text> / {details.gallery.length}</Text></View>
           </View>
@@ -93,19 +95,19 @@ export default function ProductScreen({ id }: { id: string }) {
           <View style={s.identification}><Text style={s.category}>{product.category.toUpperCase()} / PERFORMANCE RACING</Text><Pressable accessibilityRole="button" accessibilityLabel={`Copiar SKU ${id}`} onPress={copySku} style={s.sku}><Text style={s.skuLabel}>SKU:</Text><Text style={s.skuCode}>{id}</Text><StoreIcon name="content-copy" size={13} color={c.muted} /></Pressable></View>
           <Text style={s.title}>{product.name}</Text>
           <View style={s.stock}><View style={[s.dot, !inStock && { backgroundColor: c.error }]} /><Text style={[s.stockLabel, !inStock && { color: c.error }]}>{inStock ? 'Em Estoque' : 'Indisponível'}</Text><Text style={s.stockText}>{inStock ? `• ${product.stock ?? DEMO_STOCK} unidades no CD São Paulo` : '• Aguarde a reposição desta peça'}</Text></View>
-          <View style={s.pricePanel}><View style={s.priceHeading}><Text style={s.price}>{money(product.price)}</Text>{product.id === 'SZ-TUR-660-TS' && <View style={s.discount}><Text style={s.discountText}>-5% OFF</Text></View>}</View><Text style={s.paymentLabel}>À VISTA NO PIX COM DESPACHO IMEDIATO</Text><View style={s.installments}><StoreIcon name="credit-card-outline" color={blue} size={21} /><Text style={s.installmentText}>ou até <Text style={{ fontFamily: f.medium }}>12x de {money(cardPrice / 12)}</Text> sem juros</Text><Text style={s.cardLabel}>CARTÃO</Text></View></View>
+          <View style={s.pricePanel}><View style={s.priceHeading}><Text style={s.price}>{money(product.price)}</Text>{product.id === 'SZ-TUR-660-TS' && <View style={s.discount}><Text style={s.discountText}>-5% OFF</Text></View>}</View><Text style={s.paymentLabel}>VALOR À VISTA · COMPRA SIMULADA</Text><View style={s.installments}><StoreIcon name="credit-card-outline" color={blue} size={21} /><Text style={s.installmentText}>ou até <Text style={{ fontFamily: f.medium }}>12x de {money(cardPrice / 12)}</Text> sem juros</Text><Text style={s.cardLabel}>CARTÃO</Text></View></View>
           <View style={s.quantityPanel}><Text style={s.quantityLabel}>Quantidade:</Text><View style={s.stepper}><Pressable accessibilityRole="button" accessibilityLabel="Diminuir quantidade" accessibilityState={{ disabled: !canAdd || selectedQuantity <= 1 }} disabled={!canAdd || selectedQuantity <= 1} onPress={() => setQuantity(selectedQuantity - 1)} style={[s.stepButton, (!canAdd || selectedQuantity <= 1) && s.disabled]}><StoreIcon name="minus" color={c.text} size={20} /></Pressable><Text accessibilityLiveRegion="polite" style={s.quantity}>{selectedQuantity}</Text><Pressable accessibilityRole="button" accessibilityLabel="Aumentar quantidade" accessibilityState={{ disabled: !canAdd || selectedQuantity >= remaining }} disabled={!canAdd || selectedQuantity >= remaining} onPress={() => setQuantity(selectedQuantity + 1)} style={[s.stepButton, (!canAdd || selectedQuantity >= remaining) && s.disabled]}><StoreIcon name="plus" color={c.text} size={20} /></Pressable></View></View>
           {(cart[id] ?? 0) > 0 && <Text style={s.cartHint}>{cart[id]} no carrinho · {remaining} {remaining === 1 ? 'unidade disponível' : 'unidades disponíveis'} para adicionar</Text>}
-          <View style={s.simulation}><View style={s.simulationLabel}><StoreIcon name="tune" size={14} color={c.subtle} /><Text style={s.micro}>Simular disponibilidade:</Text></View><Pressable accessibilityRole="button" onPress={() => setAvailable(!available)} style={s.simulationButton}><Text style={s.simulationText}>{inStock ? 'Alternar p/ Indisponível' : 'Reativar Estoque'}</Text></Pressable></View>
+          <View style={s.simulation}><View style={s.simulationLabel}><StoreIcon name="tune" size={14} color={c.subtle} /><Text style={s.micro}>Simular disponibilidade:</Text></View></View>
           <View style={s.accordions}>
             <Accordion title="Descrição & Aplicação Mecânica" icon="information-outline" initiallyOpen><Text style={s.body}>{details.description}</Text><View style={s.applications}><Text style={s.applicationsTitle}>APLICAÇÕES DE REFERÊNCIA:</Text>{details.applications.map(application => <View style={s.application} key={application}><StoreIcon name="check" size={15} /><Text style={s.applicationText}>{application}</Text></View>)}</View></Accordion>
-            <Accordion title="Ficha Técnica & Telemetria" icon="tune" color={c.primary} initiallyOpen><View style={s.metrics}>{details.metrics.map((metric, index) => <View key={metric.label} style={s.metric}><Text style={s.micro}>{metric.label}</Text><Text style={[s.metricValue, index === 0 && { color: c.primary }]}>{metric.value}</Text></View>)}</View><View>{details.specs.map(([label, value], index) => <View key={label} style={[s.specRow, index % 2 === 0 && { backgroundColor: c.panel }]}><Text style={s.specLabel}>{label}:</Text><Text style={[s.specValue, index === details.specs.length - 1 && { color: blue }]}>{value}</Text></View>)}</View></Accordion>
-            <Accordion title="Calcular Frete & Prazo de Entrega" icon="truck-delivery-outline" color="#ffb95f"><View style={s.shippingForm}><TextInput accessibilityLabel="CEP de entrega" placeholder="00000-000" placeholderTextColor={c.subtle} keyboardType="number-pad" maxLength={9} value={cep} onChangeText={value => { setCep(value.replace(/\D/g, '').slice(0, 8).replace(/(\d{5})(\d)/, '$1-$2')); setShipping(false); setCepError(''); }} onSubmitEditing={calculateShipping} style={s.cep} /><Pressable accessibilityRole="button" onPress={calculateShipping} style={s.calculate}><Text style={s.calculateText}>Calcular</Text></Pressable></View>{cepError !== '' && <Text accessibilityRole="alert" style={s.error}>{cepError}</Text>}{shipping && <View accessibilityLiveRegion="polite" style={s.shippingResults}><Text style={s.shippingNotice}>Simulação para {cep}. Valores e prazos ilustrativos.</Text>{[{ name: 'SpeedZone Express', days: '1 a 2 dias úteis', price: 48.9, icon: 'lightning-bolt-outline' }, { name: 'Entrega Econômica', days: '3 a 5 dias úteis', price: 32.5, icon: 'package-variant-closed' }].map(option => <View key={option.name} style={s.shippingOption}><StoreIcon name={option.icon as ComponentProps<typeof StoreIcon>['name']} size={20} /><View style={s.flex}><Text style={s.applicationText}>{option.name}</Text><Text style={s.body}>{option.days}</Text></View><Text style={s.shippingPrice}>{money(option.price)}</Text></View>)}</View>}</Accordion>
+            <Accordion title="Ficha Técnica & Telemetria" icon="tune" color={c.primary}><View style={s.metrics}>{details.metrics.map((metric, index) => <View key={metric.label} style={s.metric}><Text style={s.micro}>{metric.label}</Text><Text style={[s.metricValue, index === 0 && { color: c.primary }]}>{metric.value}</Text></View>)}</View><View>{details.specs.map(([label, value], index) => <View key={label} style={[s.specRow, index % 2 === 0 && { backgroundColor: c.panel }]}><Text style={s.specLabel}>{label}:</Text><Text style={[s.specValue, index === details.specs.length - 1 && { color: blue }]}>{value}</Text></View>)}</View></Accordion>
+            <Accordion title="Calcular Frete & Prazo de Entrega" icon="truck-delivery-outline" color="#ffb95f"><View style={s.shippingForm}><TextInput accessibilityLabel="CEP de entrega" placeholder="00000-000" placeholderTextColor={c.subtle} keyboardType="number-pad" maxLength={9} value={cep} onChangeText={value => { setCep(value.replace(/\D/g, '').slice(0, 8).replace(/(\d{5})(\d)/, '$1-$2')); setShipping(false); setCepError(''); }} onSubmitEditing={calculateShipping} style={s.cep} /><Pressable accessibilityRole="button" onPress={calculateShipping} style={s.calculate}><Text style={s.calculateText}>Calcular</Text></Pressable></View>{cepError !== '' && <Text accessibilityRole="alert" style={s.error}>{cepError}</Text>}{shipping && <View accessibilityLiveRegion="polite" style={s.shippingResults}><Text style={s.shippingNotice}>Simulação para {cep}. Valores e prazos ilustrativos.</Text>{shippingOptions(cep.replace(/\D/g, ''), Math.round(product.price * 100) * selectedQuantity).map(option => <View key={option.service} style={s.shippingOption}><StoreIcon name={option.service === 'express' ? 'lightning-bolt-outline' : 'package-variant-closed'} size={20} /><View style={s.flex}><Text style={s.applicationText}>{option.label}</Text><Text style={s.body}>{option.days}</Text></View><Text style={s.shippingPrice}>{money(option.price / 100)}</Text></View>)}</View>}</Accordion>
           </View>
           <Text style={s.demo}>MODO DEMONSTRAÇÃO · DADOS DO CATÁLOGO ILUSTRATIVOS</Text>
         </View>
       </ScrollView>
-      <SafeAreaView edges={['bottom']} style={s.bottom}><View style={s.bottomInner}><View style={s.total}><Text style={s.totalLabel}>Total à vista:</Text><Text numberOfLines={1} adjustsFontSizeToFit style={s.totalPrice}>{money(product.price * selectedQuantity)}</Text></View><Pressable accessibilityRole="button" accessibilityLabel={canAdd ? 'Adicionar ao Carrinho' : 'Produto indisponível para adicionar'} accessibilityState={{ disabled: !canAdd }} disabled={!canAdd} onPress={addToCart} style={({ pressed }) => [s.buy, !canAdd && s.buyDisabled, pressed && s.pressed]}><StoreIcon name={canAdd ? 'cart-outline' : 'cart-off'} size={23} color={canAdd ? c.onPrimary : c.subtle} /><Text style={[s.buyText, !canAdd && { color: c.subtle }]}>{!available ? 'Produto Indisponível' : remaining === 0 ? 'Limite no Carrinho' : 'Adicionar ao Carrinho'}</Text></Pressable></View></SafeAreaView>
+      <SafeAreaView edges={['bottom']} style={s.bottom}><View style={s.bottomInner}><View style={s.total}><Text style={s.totalLabel}>Total à vista:</Text><Text numberOfLines={1} adjustsFontSizeToFit style={s.totalPrice}>{money(product.price * selectedQuantity)}</Text></View><Pressable accessibilityRole="button" accessibilityLabel={canAdd ? 'Adicionar ao Carrinho' : 'Produto indisponível para adicionar'} accessibilityState={{ disabled: !canAdd }} disabled={!canAdd} onPress={addToCart} style={({ pressed }) => [s.buy, !canAdd && s.buyDisabled, pressed && s.pressed]}><StoreIcon name={canAdd ? 'cart-outline' : 'cart-off'} size={23} color={canAdd ? c.onPrimary : c.subtle} /><Text style={[s.buyText, !canAdd && { color: c.subtle }]}>{!inStock ? 'Produto Indisponível' : remaining === 0 ? 'Limite no Carrinho' : 'Adicionar ao Carrinho'}</Text></Pressable></View></SafeAreaView>
     </KeyboardAvoidingView>
     {feedback && <View accessibilityLiveRegion="polite" style={s.feedback}><StoreIcon name="check-circle-outline" size={22} /><View style={s.flex}><Text style={s.feedbackText}>{feedback.text}</Text>{feedback.cart && <Pressable accessibilityRole="button" onPress={() => { setFeedback(null); router.navigate('/(main)/cart'); }} style={s.feedbackLink}><Text style={s.calculateText}>Ver carrinho →</Text></Pressable>}</View><Pressable accessibilityRole="button" accessibilityLabel="Fechar mensagem" onPress={() => setFeedback(null)} style={s.iconButton}><StoreIcon name="close" size={18} /></Pressable></View>}
   </SafeAreaView>;

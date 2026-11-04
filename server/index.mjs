@@ -164,7 +164,14 @@ export function createApi({ database = resolve('server/data/speedzone.sqlite') }
         if ('activeCarId' in body) profile.activeCarId = body.activeCarId;
         if (profile.activeCarId !== null && !profile.cars.some(car => car.id === profile.activeCarId)) fail('Projeto ativo inválido.');
         const email = 'email' in body ? emailOf(body.email) : row.email;
-        try { db.prepare('UPDATE users SET email = ?, profile = ? WHERE id = ?').run(email, JSON.stringify(profile), row.id); } catch (error) { if (String(error).includes('UNIQUE')) fail('Este e-mail já está cadastrado.', 409); throw error; }
+        db.exec('BEGIN IMMEDIATE');
+        try {
+          const serialized = JSON.stringify(profile);
+          db.prepare('UPDATE users SET email = ?, profile = ? WHERE id = ?').run(email, serialized, row.id);
+          // Invalidate an administrator's open form when the pilot edits their own profile.
+          if (email !== row.email || serialized !== row.profile) db.prepare('UPDATE user_management SET revision = revision + 1 WHERE user_id = ?').run(row.id);
+          db.exec('COMMIT');
+        } catch (error) { db.exec('ROLLBACK'); if (String(error).includes('UNIQUE')) fail('Este e-mail já está cadastrado.', 409); throw error; }
         return send({ user: { ...profile, id: row.id, email, isAdmin: isAdmin(db, row.id), canSupport: canSupport(db,row.id) } });
       }
       fail('Rota não encontrada.', 404);

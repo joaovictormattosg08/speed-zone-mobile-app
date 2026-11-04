@@ -2,6 +2,20 @@
 
 Aplicativo Expo SDK 57 / React Native com Expo Router. Use Node.js 24 ou superior e npm.
 
+Veja [REVIEW.md](./REVIEW.md) para a revisão funcional, os ajustes de conteúdo, as verificações executadas e as pendências de produção.
+
+## Telas administrativas das referências
+
+- **Vendas → Ver Detalhes do Pedido**: tela de expedição com etapas permitidas pela API, cadastro/garagem do cliente, componentes, totais, rastreio copiável quando disponível, histórico e confirmação de cancelamento.
+- **Suporte → Abrir detalhes do chamado**: solicitante, veículo, pedido vinculado, evidência ampliável, diagnóstico, conversa e envio de parecer. Rascunhos são guardados apenas durante a sessão aberta do aplicativo. Uma atualização concorrente exige conferir o histórico antes de reenviar.
+- **Usuários → Editar**: cadastro, hierarquia Piloto/Box/Admin, status da conta, motivo de restrição, garagem e histórico administrativo. O administrador não pode retirar o próprio acesso.
+- **Cupons → Editar**: métricas reais de uso e desconto, código copiável, regras existentes, ações fixas no rodapé e arquivamento confirmado, preservando o histórico.
+- **Produtos → Editar**: documentação visual, identificação, custo/estoque, aplicação técnica, publicação, alerta de reposição e remoção confirmada do catálogo.
+
+As referências visuais não representam serviços já contratados. Permanecem pendentes: notificações WhatsApp/e-mail, nota fiscal/DANFE e etiqueta de transporte, pagamento/estorno real, SLA e transferência de chamados, anexos técnicos enviados pela equipe, canais B2B/destaques independentes, benefícios especiais de usuários e recuperação de acesso. Esses controles não são apresentados como operações concluídas. A remoção de produtos e o arquivamento de cupons preservam os registros históricos.
+
+Validação desta implementação: lint, TypeScript, seis testes da API e exportação web. A revisão visual no navegador e os testes em dispositivos Android/iOS ainda precisam ser realizados.
+
 ## Usar no computador
 
 Na pasta do projeto, abra dois terminais:

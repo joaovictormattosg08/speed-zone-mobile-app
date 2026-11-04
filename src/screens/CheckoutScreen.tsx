@@ -1,3 +1,4 @@
+import { CatalogStatus } from '../components/CatalogStatus';
 import { useCoupons } from '../hooks/useCoupons';
 import { useCatalog } from '../context/CatalogContext';
 import { useLoyalty } from '../hooks/useLoyalty';
@@ -14,7 +15,7 @@ import { calculateCart, ShippingChoice } from '../utils/cartPricing';
 import { checkoutStyles as s, Amount, CheckoutButton, CheckoutHeader, OrderTotals } from '../components/CheckoutUI';
 
 export default function CheckoutScreen() {
-  const { products } = useCatalog();
+  const { products, loading: catalogLoading, error: catalogError } = useCatalog();
   const params = useLocalSearchParams<{ coupon?: string; cep?: string; service?: string }>();
   const loyalty = useLoyalty();
   const promotions = useCoupons();
@@ -35,6 +36,7 @@ export default function CheckoutScreen() {
   const pending = useRef<{ signature: string; key: string } | null>(null);
   const scroll = useRef<ScrollView>(null);
   const items = products.filter(p => cart[p.id]).map(p => ({ ...p, quantity: cart[p.id] }));
+  const unavailable = Object.keys(cart).some(id => cart[id] > 0 && !products.some(p => p.id === id));
   const totals = calculateCart(items, params.coupon || null, delivery, availableCoupons.find(item => item.code === params.coupon));
   function advance() {
     if (!savedCep || recipient.trim().length < 3 || address.trim().length < 10 || !delivery) { setError('Informe o destinatário, o endereço completo e selecione a entrega.'); return; }
@@ -42,6 +44,7 @@ export default function CheckoutScreen() {
   }
   async function finish() {
     if (lock.current || !delivery || !items.length) return;
+    if (catalogLoading || catalogError || unavailable) { setError('Confira o catálogo e remova as peças indisponíveis no carrinho antes de confirmar.'); return; }
     if (params.coupon && totals.validCoupon !== params.coupon) { setError('Cupom indisponível. Volte ao carrinho e confira seus cupons.'); return; }
     lock.current = true; setBusy(true); setError('');
     const checkout = { recipient, address, instructions, payment };
@@ -58,6 +61,8 @@ export default function CheckoutScreen() {
     finally { lock.current = false; setBusy(false); }
   }
   return <SafeAreaView style={s.safe}><CheckoutHeader title="CHECKOUT" onBack={() => { if (busy) return; if (step > 1) { setStep(step - 1); setError(''); } else router.navigate('/(main)/cart'); }} /><KeyboardAvoidingView style={s.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}><ScrollView ref={scroll} keyboardShouldPersistTaps="handled" contentContainerStyle={s.content}>
+    <CatalogStatus/>
+    {unavailable&&<Text style={s.error}>Há peças indisponíveis. Volte ao carrinho para revisar.</Text>}
     <View style={[s.card, s.row]}>{['Carrinho', 'Entrega', 'Pagamento', 'Revisão'].map((label, index) => <View key={label} style={s.step}><View style={[s.stepIcon, index <= step && s.active]}><Text style={s.stepNumber}>{index < step ? '✓' : index + 1}</Text></View><Text style={[s.micro, index === step && s.green]}>{label.toUpperCase()}</Text></View>)}</View>
     {!items.length ? <View style={s.card}><Text style={s.title}>Seu carrinho está vazio</Text><CheckoutButton label="Voltar ao catálogo" onPress={() => router.replace('/(main)/catalog')} /></View> : <>
     {step === 1 && <><Text style={s.title}>⌖ PONTO DE ENTREGA</Text><View style={s.card}><Text style={s.green}>ENDEREÇO DA GARAGEM</Text><Text style={s.title}>{recipient}</Text><Text style={s.body}>{address || 'Cadastre seu endereço de entrega para continuar.'}</Text><CheckoutButton label={savedCep ? 'ALTERAR ENDEREÇO' : 'CADASTRAR ENDEREÇO'} onPress={() => router.push('/address')} /></View>{savedCep && <CartShipping key={savedCep} subtotal={totals.subtotal} selected={delivery} onSelect={setDelivery} lockedCep={savedCep} />}<View style={s.card}><Text style={s.title}>Instruções especiais de peças</Text><Text style={s.body}>Orientações de entrega e cuidados com o pacote (opcional).</Text><TextInput accessibilityLabel="Instruções de entrega" value={instructions} onChangeText={setInstructions} maxLength={1000} multiline placeholder="Ex.: deixar na portaria com o responsável..." placeholderTextColor="#86948a" style={[s.input, s.textarea]} /></View></>}

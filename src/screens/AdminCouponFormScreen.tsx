@@ -1,3 +1,4 @@
+import { Disclosure } from '../components/Disclosure';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, Switch, Text, TextInput, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -10,6 +11,8 @@ import { ProductAction, ps as s } from '../components/AdminProductUI';
 import { PilotAvatar } from '../components/PilotAvatar';
 import { StoreIcon } from '../components/StoreHeader';
 import { colors as c } from '../theme/tokens';
+import * as Clipboard from 'expo-clipboard';
+import { ConfirmAction } from '../components/AdminDetailUI';
 
 const blank:PromotionDraft={code:'',label:'',kind:'percent',value:20,minimum:0,maximum:0,categories:[],limit:150,expires:'',paused:false,archived:false,ownerEmail:'',revision:0};
 const numeric=(value:string)=>/^\d+(?:[.,]\d{1,2})?$/.test(value.trim())?Number(value.replace(',','.')):NaN;
@@ -22,6 +25,14 @@ export default function AdminCouponFormScreen(){
  const [draft,setDraft]=useState<PromotionDraft>(blank),[known,setKnown]=useState<Promotion[]>([]),[loading,setLoading]=useState(true),[loaded,setLoaded]=useState(false),[error,setError]=useState(''),[busy,setBusy]=useState(false),[retry,setRetry]=useState(0);
  const [values,setValues]=useState({value:'20',minimum:'0',maximum:'0',limit:'150',sample:'1500'});
  const lock=useRef(false),scroll=useRef<ScrollView>(null);
+ const [confirmArchive,setConfirmArchive]=useState(false),[notice,setNotice]=useState('');
+ const original=code&&!duplicate?known.find(p=>p.code===code):undefined;
+ async function archive(){
+  if(!original||lock.current)return;lock.current=true;setBusy(true);setError('');
+  try{await saveCoupon(original.code,{...original,archived:true,paused:true});router.replace('/admin-coupons');}
+  catch(e){setError((e as Error).message);scroll.current?.scrollTo({y:0,animated:true});}
+  finally{lock.current=false;setBusy(false);}
+ }
  useEffect(()=>{let alive=true;listAdminCoupons().then(all=>{if(!alive)return;setKnown(all);if(code){const p=all.find(item=>item.code===code);if(!p)throw new Error('Cupom não encontrado.');setDraft({...p,categories:p.categories||[],maximum:p.maximum||0,...(duplicate?{code:p.code.slice(0,32)+'-COPIA',paused:true,archived:false,revision:0}:{})});setValues({value:String(p.kind==='fixed'?p.value/100:p.value),minimum:String(p.minimum/100),maximum:String((p.maximum||0)/100),limit:String(p.limit),sample:'1500'});}setError('');setLoaded(true);}).catch(e=>{if(alive)setError(e.message);}).finally(()=>{if(alive)setLoading(false);});return()=>{alive=false;};},[code,duplicate,listAdminCoupons,retry]);
  const change=<K extends keyof PromotionDraft>(key:K,value:PromotionDraft[K])=>setDraft(p=>({...p,[key]:value}));
  const taken=known.some(p=>p.code===draft.code&&(duplicate||p.code!==code));
@@ -41,6 +52,14 @@ export default function AdminCouponFormScreen(){
   <KeyboardAvoidingView style={s.flex} behavior={Platform.OS==='ios'?'padding':undefined}><ScrollView ref={scroll} keyboardShouldPersistTaps="handled" contentContainerStyle={s.content}>
    <ProductAction label="‹ Voltar para Cupons" disabled={busy} onPress={()=>router.replace('/admin-coupons')}/>
    <View><Text style={s.eyebrow}>TELEMETRIA PROMOCIONAL</Text><Text style={s.title}>{code&&!duplicate?'Editar Cupom':'Configurar Cupom'}</Text></View>
+   {!!notice&&<Text accessibilityLiveRegion="polite" style={s.green}>{notice}</Text>}
+   {original&&<View style={s.card}>
+    <View style={s.between}><Text style={s.eyebrow}>{original.code}</Text><ProductAction label="Copiar" onPress={()=>{void Clipboard.setStringAsync(original.code).then(()=>setNotice('Código copiado.')).catch(()=>setError('Não foi possível copiar o código.'));}}/></View>
+    <Text style={s.body}>{original.label}</Text><Text style={s.eyebrow}>{({active:'ATIVO',paused:'PAUSADO',expired:'EXPIRADO',exhausted:'ESGOTADO',archived:'ARQUIVADO'} as const)[original.state]}</Text>
+    <View style={s.between}><Text style={s.small}>QUOTA DE RESGATE</Text><Text style={s.green}>{original.used} / {original.limit||'ilimitado'}</Text></View>
+    {original.limit>0&&<View accessibilityRole="progressbar" accessibilityValue={{min:0,max:original.limit,now:Math.min(original.used,original.limit)}} style={{height:7,backgroundColor:c.elevated,borderRadius:4,overflow:'hidden'}}><View style={{height:7,width:`${Math.min(100,original.used/original.limit*100)}%`,backgroundColor:c.primary}}/></View>}
+    <View style={s.row}><View style={s.flex}><Text style={s.small}>DESCONTO CONCEDIDO</Text><Text style={s.section}>{money(original.savings/100)}</Text></View><View style={s.flex}><Text style={s.small}>USOS RESTANTES</Text><Text style={s.section}>{original.limit?Math.max(0,original.limit-original.used):'Sem limite'}</Text></View></View>
+   </View>}
    {!!error&&<View><Text accessibilityRole="alert" style={s.error}>{error}</Text>{!loaded&&!loading&&<ProductAction label="Tentar novamente" onPress={()=>{setLoading(true);setLoaded(false);setRetry(v=>v+1);}}/>}</View>}
    {loading?<ActivityIndicator color={c.primary}/>:loaded&&<>
     <View style={[s.card,s.row]}><View style={s.flex}><Text style={s.eyebrow}>SIMULADOR DE IMPACTO</Text><Text style={s.title}>{draft.code||'SEU CUPOM'}</Text><Text style={s.body}>{draft.kind==='fixed'?money(discountValue||0):`${discountValue||0}%`} de desconto {draft.kind==='shipping'?'no frete':'nos produtos elegíveis'}.</Text></View><Image source={products.find(p=>p.category==='Freios')?.image||products[0].image} style={{width:72,height:72,borderRadius:5}}/></View>
@@ -51,10 +70,10 @@ export default function AdminCouponFormScreen(){
     <View style={s.card}><Text style={s.section}>▣ 3. Validade & Regras</Text><Field label="Data de Expiração (AAAA-MM-DD)" value={draft.expires} onChange={v=>change('expires',v)} disabled={busy} placeholder="Opcional"/><Text style={s.small}>Válido até 23:59 da data informada, horário de Brasília.</Text><Field label="Limite Global de Usos (0 = ilimitado)" numeric value={values.limit} onChange={v=>setValues(p=>({...p,limit:v}))} disabled={busy}/><View style={[s.row,{backgroundColor:c.input,padding:12}]}><StoreIcon name="shield-check-outline"/><View style={s.flex}><Text style={s.section}>Apenas 1 uso por conta</Text><Text style={s.small}>Regra permanente. Cancelamentos não liberam outro uso.</Text></View></View><Field label="Conta exclusiva: e-mail (opcional)" value={draft.ownerEmail} onChange={v=>change('ownerEmail',v)} disabled={busy}/></View>
     <View style={s.card}><Text style={s.section}>⚑ 4. Restrições de Categorias</Text><Text style={s.body}>{draft.categories?.length?`${draft.categories.length} categorias selecionadas`:'Todas as categorias. Selecione para restringir.'}</Text><View style={{flexDirection:'row',flexWrap:'wrap',gap:8}}>{options.map(name=>{const active=draft.categories?.includes(name);return <Pressable key={name} accessibilityRole="checkbox" accessibilityState={{checked:!!active}} disabled={busy} onPress={()=>change('categories',active?draft.categories!.filter(v=>v!==name):[...(draft.categories||[]),name])} style={[s.chip,active&&s.active]}><Text style={active?s.green:s.body}>{active?'✓ ':''}{name}</Text></Pressable>;})}</View><Text style={s.small}>{draft.kind==='shipping'?'O pedido deve conter ao menos uma peça da categoria selecionada.':'O desconto incide apenas sobre as peças das categorias selecionadas.'}</Text></View>
     <View style={s.card}><Text style={s.section}>● 5. Status & Publicação</Text><View style={s.between}><View style={s.flex}><Text style={s.section}>Ativar cupom no checkout</Text><Text style={s.small}>A validade e o limite de usos continuam valendo.</Text></View><Switch accessibilityLabel="Ativar cupom" value={!draft.paused} disabled={busy} onValueChange={v=>change('paused',!v)} trackColor={{true:c.primary,false:c.elevated}}/></View>{draft.archived&&<ProductAction label="Restaurar cupom arquivado" disabled={busy} onPress={()=>change('archived',false)}/>}</View>
-    <View style={s.card}><Text style={s.eyebrow}>PRÉVIA DO BENEFÍCIO</Text><Field label={draft.kind==='shipping'?'Frete para simular (R$)':'Produtos elegíveis para simular (R$)'} numeric value={values.sample} onChange={v=>setValues(p=>({...p,sample:v}))}/><Text style={s.section}>Desconto estimado: {money(Number.isFinite(simulated)?simulated/100:0)}</Text><Text style={s.small}>Simulação para um pedido que atende ao valor mínimo, à validade e às regras de uso.</Text></View>
-    <ProductAction primary disabled={busy||!loaded} label={busy?'Salvando…':'✓ Salvar Cupom de Desconto'} onPress={()=>void save()}/><ProductAction label="Cancelar" disabled={busy} onPress={()=>router.replace('/admin-coupons')}/>
+    <Disclosure title="Simular desconto"><Field label={draft.kind==='shipping'?'Frete para simular (R$)':'Produtos elegíveis para simular (R$)'} numeric value={values.sample} onChange={v=>setValues(p=>({...p,sample:v}))}/><Text style={s.section}>Desconto estimado: {money(Number.isFinite(simulated)?simulated/100:0)}</Text><Text style={s.small}>Simulação para um pedido que atende ao valor mínimo, à validade e às regras de uso.</Text></Disclosure>
+    {original&&!original.archived&&<View style={[s.card,{backgroundColor:'#301419'}]}><Text style={s.error}>ZONA DE RISCO</Text><Text style={s.body}>Arquivar interrompe novos resgates. O histórico de pedidos e descontos permanece preservado.</Text>{confirmArchive?<ConfirmAction title="Arquivar este cupom?" description={original.code} busy={busy} onConfirm={()=>void archive()} onCancel={()=>setConfirmArchive(false)}/>:<ProductAction label="Arquivar Cupom" disabled={busy} onPress={()=>setConfirmArchive(true)}/>}</View>}
    </>}
-  </ScrollView></KeyboardAvoidingView>
+  </ScrollView><View style={[s.footer,s.row]}><View style={s.flex}><ProductAction label="Cancelar" disabled={busy} onPress={()=>router.replace('/admin-coupons')}/></View><View style={{flex:2}}><ProductAction primary label={busy?'Salvando…':'✓ Salvar Alterações'} disabled={busy||loading||!loaded} onPress={()=>void save()}/></View></View></KeyboardAvoidingView>
   <View style={s.nav}>{([{label:'Dashboard',path:'/admin',icon:'view-dashboard-outline'},{label:'Produtos',path:'/admin-products',icon:'archive-outline'},{label:'Vendas',path:'/admin-orders',icon:'chart-line'},{label:'Cupons',path:'/admin-coupons',icon:'ticket-percent-outline'},{label:'Usuários',path:'/admin-users',icon:'account-group-outline'}] as const).map(tab=><Pressable key={tab.label} accessibilityRole="button" disabled={busy} style={s.navItem} onPress={()=>router.replace(tab.path)}><StoreIcon name={tab.icon} color={tab.label==='Cupons'?c.primary:c.muted}/><Text style={[s.small,tab.label==='Cupons'&&s.green]}>{tab.label}</Text></Pressable>)}</View>
  </SafeAreaView>;
 }

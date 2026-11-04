@@ -1,3 +1,4 @@
+import { CatalogStatus } from '../components/CatalogStatus';
 import { useCoupons } from '../hooks/useCoupons';
 import { useCatalog } from '../context/CatalogContext';
 import { useLoyalty } from '../hooks/useLoyalty';
@@ -15,7 +16,7 @@ import { colors as c, fonts as f } from '../theme/tokens';
 
 const format = (cents: number) => money(cents / 100);
 export default function CartScreen() {
-  const { products } = useCatalog();
+  const { products, loading: catalogLoading } = useCatalog();
   const { cart, add, remove, removeItem, count } = useStore();
   const { user } = useAuth();
   const loyalty = useLoyalty();
@@ -28,13 +29,13 @@ export default function CartScreen() {
   const [code, setCode] = useState('');
   const [coupon, setCoupon] = useState<string | null>(null);
   const [error, setError] = useState('');
-  const [previewEmpty, setPreviewEmpty] = useState(false);
   const [sheet, setSheet] = useState<'coupons' | null>(null);
   const items = products.filter(item => cart[item.id]).map(item => ({ ...item, quantity: cart[item.id] }));
+  const unavailable = Object.keys(cart).filter(id => cart[id] > 0 && !products.some(p => p.id === id));
   const totals = calculateCart(items, coupon, delivery, availableCoupons.find(item => item.code === coupon));
   const selectedShipping = delivery ? shippingOptions(delivery.cep, totals.subtotal).find(option => option.service === delivery.service) : undefined;
   const invalidatedCoupon = coupon ? couponError(coupon, totals.subtotal, availableCoupons.find(item => item.code === coupon), items) : null;
-  const empty = items.length === 0 || previewEmpty;
+  const empty = items.length === 0;
   function apply(value = code) {
     const normalized = value.trim().toUpperCase();
     const message = couponError(normalized, totals.subtotal, availableCoupons.find(item => item.code === normalized), items);
@@ -46,16 +47,19 @@ export default function CartScreen() {
   function example() {
     if (count > 0) return;
     add('SZ-TUR-042'); add('SZ-ELT-220'); add('SZ-ACC-015', 2);
-    setCoupon(null); setError(''); setPreviewEmpty(false);
+    setCoupon(null); setError('');
   }
   const browse = () => router.navigate('/(main)/catalog');
+  if (catalogLoading) return <SafeAreaView style={s.safe}><StoreHeader title="CARRINHO"/><CatalogStatus/></SafeAreaView>;
   return <SafeAreaView edges={['top', 'left', 'right']} style={s.safe}>
     <StoreHeader title="CARRINHO" />
     <View style={s.status}><View style={s.inline}><View style={s.dot} /><Text style={s.statusText}>GARAGEM • PEDIDO ATIVO</Text></View><View style={s.secure}><StoreIcon name="shield-check-outline" color="#7bd0ff" size={13} /><Text style={s.secureText}>CHECKOUT DEMO</Text></View></View>
     <KeyboardAvoidingView style={s.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
-        <View style={s.heading}><Text style={s.title}>Meu Carrinho</Text><View style={s.count}><Text style={s.countText}>{previewEmpty ? 0 : count} {count === 1 && !previewEmpty ? 'item' : 'itens'}</Text></View>{count > 0 && <Pressable accessibilityRole="button" onPress={() => setPreviewEmpty(!previewEmpty)} style={s.preview}><StoreIcon name="eye-outline" color={c.muted} size={16} /><Text style={s.micro}>{previewEmpty ? 'Ver Cheio' : 'Ver Vazio'}</Text></Pressable>}</View>
-        {empty ? <View style={s.empty}><View style={s.emptyIcon}><StoreIcon name="engine-outline" size={64} /></View><Text style={s.eyebrow}>BOX VAZIO</Text><Text style={s.emptyTitle}>Seu carrinho está vazio</Text><Text style={s.emptyBody}>{previewEmpty ? 'Prévia do estado vazio. Seus produtos continuam guardados no carrinho.' : 'Nenhum componente no seu projeto no momento. Encontre as peças certas e turbine seu veículo na pista ou na rua.'}</Text><Pressable accessibilityRole="button" onPress={browse} style={s.primary}><StoreIcon name="tools" color={c.onPrimary} /><Text style={s.primaryText}>EXPLORAR PRODUTOS</Text></Pressable><Pressable accessibilityRole="button" onPress={() => router.navigate('/(main)/home')} style={s.secondary}><StoreIcon name="garage-variant" color={c.text} /><Text style={s.secondaryText}>Acessar Minha Garagem</Text></Pressable>{count === 0 && <Pressable accessibilityRole="button" onPress={example} style={s.example}><Text style={s.link}>Carregar carrinho de exemplo</Text></Pressable>}</View> : <>
+        <CatalogStatus/>
+        {unavailable.map(id=><View key={id} style={s.panel}><Text style={s.error}>Peça indisponível no catálogo: {id}</Text><Pressable accessibilityRole="button" onPress={()=>removeItem(id)} style={s.secondary}><Text style={s.secondaryText}>Remover peça indisponível</Text></Pressable></View>)}
+        <View style={s.heading}><Text style={s.title}>Meu Carrinho</Text><View style={s.count}><Text style={s.countText}>{count} {count === 1 ? 'item' : 'itens'}</Text></View></View>
+        {empty ? <View style={s.empty}><View style={s.emptyIcon}><StoreIcon name="engine-outline" size={64} /></View><Text style={s.eyebrow}>BOX VAZIO</Text><Text style={s.emptyTitle}>Seu carrinho está vazio</Text><Text style={s.emptyBody}>Encontre as peças certas para seu projeto.</Text><Pressable accessibilityRole="button" onPress={browse} style={s.primary}><StoreIcon name="tools" color={c.onPrimary} /><Text style={s.primaryText}>EXPLORAR PRODUTOS</Text></Pressable><Pressable accessibilityRole="button" onPress={() => router.navigate('/(main)/account')} style={s.secondary}><StoreIcon name="garage-variant" color={c.text} /><Text style={s.secondaryText}>Acessar Minha Garagem</Text></Pressable>{count === 0 && <Pressable accessibilityRole="button" onPress={example} style={s.example}><Text style={s.link}>Carregar carrinho de exemplo</Text></Pressable>}</View> : <>
           <View style={s.shippingBand}><StoreIcon name="truck-delivery-outline" size={20} color="#ffb95f" /><Text style={s.shippingCopy}>{totals.remaining ? <>Faltam <Text style={s.green}>{format(totals.remaining)}</Text> para <Text style={s.green}>Frete Grátis</Text></> : <Text style={s.green}>Frete Grátis liberado para seu projeto!</Text>}</Text><Text style={s.micro}>{totals.progress}%</Text></View>
           <View accessibilityRole="progressbar" accessibilityLabel="Progresso para frete grátis" accessibilityValue={{ min: 0, max: 100, now: totals.progress }} style={s.track}><View style={[s.progress, { width: `${totals.progress}%` }]} /></View>
           <View style={s.items}>{items.map(item => <View style={s.item} key={item.id}>

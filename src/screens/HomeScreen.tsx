@@ -1,3 +1,6 @@
+import { CatalogStatus } from '../components/CatalogStatus';
+import { Disclosure } from '../components/Disclosure';
+import { useAuth } from '../context/AuthContext';
 import { useCatalog } from '../context/CatalogContext';
 import { useState } from 'react';
 import { Image, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -10,7 +13,10 @@ import { colors as c, fonts as f } from '../theme/tokens';
 
 const stages = ['TODOS', 'STAGE 1', 'STAGE 2+', 'STAGE 3', 'TRACK DAY'];
 export default function HomeScreen({ catalog = false }: { catalog?: boolean }) {
-  const { products } = useCatalog();
+  const { products, loading: catalogLoading, error: catalogError } = useCatalog();
+  const { user, update } = useAuth();
+  const [garageBusy, setGarageBusy] = useState(false);
+  const [garageError, setGarageError] = useState('');
   const params = useLocalSearchParams<{ category?: string }>();
   const [query, setQuery] = useState('');
   const [stage, setStage] = useState('TODOS');
@@ -18,47 +24,57 @@ export default function HomeScreen({ catalog = false }: { catalog?: boolean }) {
   const [sheet, setSheet] = useState<'garage' | 'filter' | 'package' | null>(null);
   const [sort, setSort] = useState(false);
   const [selectedParts, setSelectedParts] = useState(['Downpipe', 'Intake', 'Remap Stage 2']);
-  const { add, cart, vehicle, setVehicle } = useStore();
+  const { add, cart, vehicle } = useStore();
   const activeCategory = category || (catalog ? params.category : '') || '';
   const filtered = products.filter(p => (!activeCategory || p.category === activeCategory) && (stage === 'TODOS' || p.stage === stage) && `${p.name} ${p.id}`.toLocaleLowerCase('pt-BR').includes(query.toLocaleLowerCase('pt-BR').trim()));
   if (sort) filtered.sort((a, b) => a.price - b.price);
   const power = 230 + selectedParts.reduce((sum, part) => sum + ({ Downpipe: 18, Intake: 10, 'Remap Stage 2': 60 }[part] ?? 0), 0);
+  const visibleProducts = !catalog && !query.trim() && !activeCategory && stage === 'TODOS' ? filtered.slice(0, 4) : filtered;
+  async function selectCar(id: string) {
+    if (garageBusy) return; setGarageBusy(true); setGarageError('');
+    try { await update({ activeCarId: id }); setSheet(null); }
+    catch (e) { setGarageError((e as Error).message); } finally { setGarageBusy(false); }
+  }
   const openCatalog = () => router.navigate('/(main)/catalog');
   function clear() { setQuery(''); setStage('TODOS'); setCategory(''); if (catalog) router.setParams({ category: '' }); }
 
   return <SafeAreaView edges={['top', 'left', 'right']} style={s.safe}>
     <StoreHeader title={catalog ? 'Catálogo' : 'Início'} />
     <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
+      <CatalogStatus/>
       <View style={s.searchRow}><View style={s.search}><StoreIcon name="magnify" size={20} color={c.muted} /><TextInput accessibilityLabel="Buscar por peça, nome ou SKU" placeholder="Buscar por peça, nome ou SKU..." placeholderTextColor={c.muted} value={query} onChangeText={setQuery} style={s.searchInput} returnKeyType="search" />{query !== '' && <Pressable accessibilityRole="button" accessibilityLabel="Limpar busca" onPress={() => setQuery('')} style={s.clear}><StoreIcon name="close" size={18} /></Pressable>}</View><Pressable accessibilityRole="button" accessibilityLabel="Filtros de produtos" onPress={() => setSheet('filter')} style={s.filter}><StoreIcon name="tune-variant" /></Pressable></View>
       <Pressable accessibilityRole="button" accessibilityLabel="Trocar veículo da garagem" onPress={() => setSheet('garage')} style={s.garage}><View style={s.dot} /><Text style={s.micro}>GARAGEM{ '\n' }ATIVA:</Text><Text numberOfLines={1} style={s.vehicle}>{vehicle}</Text><Text style={s.link}>TROCAR</Text></Pressable>
       {!catalog && <View style={s.hero}>
-        <View pointerEvents="none" style={s.glow} /><View style={s.seal}><StoreIcon name="check-decagram-outline" size={15} /><Text style={s.sealText}>100% PROCEDÊNCIA & PISTA</Text></View>
-        <Text style={s.heroTitle}>As melhores peças de alta qualidade para o seu <Text style={s.highlight}>projetinho</Text> você encontra aqui.</Text>
-        <Text style={s.body}>Linha motorsport de alta compressão, indução forçada e componentes forjados a pronta entrega.</Text>
+        <View pointerEvents="none" style={s.glow} /><View style={s.seal}><StoreIcon name="check-decagram-outline" size={15} /><Text style={s.sealText}>PEÇAS & PERFORMANCE</Text></View>
+        <Text style={s.heroTitle}>O próximo upgrade do seu <Text style={s.highlight}>projeto.</Text></Text>
+        <Text style={s.body}>Explore peças, confira a aplicação e monte seu carrinho.</Text>
         <Pressable accessibilityRole="button" onPress={openCatalog} style={({ pressed }) => [s.cta, pressed && s.pressed]}><Text style={s.ctaText}>Explorar Catálogo</Text><StoreIcon name="arrow-right" color={c.onPrimary} size={18} /></Pressable>
       </View>}
-      <View style={s.sectionHeading}><View style={s.marker} /><Text style={s.sectionTitle}>Categorias de Performance</Text><Text style={s.micro}>12 LINHAS</Text></View>
+      <View style={s.sectionHeading}><View style={s.marker} /><Text style={s.sectionTitle}>Categorias de Performance</Text><Text style={s.micro}>{categories.length} LINHAS</Text></View>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.categories}>{categories.map(([name, icon]) => <Pressable key={name} accessibilityRole="button" accessibilityState={{ selected: activeCategory === name }} onPress={() => { setCategory(activeCategory === name ? '' : name); if (catalog) router.setParams({ category: '' }); }} style={[s.category, activeCategory === name && s.categorySelected]}><View style={s.categoryIcon}><StoreIcon name={icon} size={25} /></View><Text style={s.categoryText}>{name}</Text></Pressable>)}</ScrollView>
       <View style={s.sectionHeading}><View style={[s.marker, { backgroundColor: '#7bd0ff' }]} /><Text style={s.sectionTitle}>Projetos em Alta</Text><Pressable accessibilityRole="button" onPress={clear} style={s.smallAction}><Text style={s.link}>Ver Todos</Text></Pressable></View>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.chips}>{stages.map(value => <Pressable key={value} accessibilityRole="button" accessibilityState={{ selected: stage === value }} onPress={() => setStage(value)} style={[s.chip, stage === value && s.chipActive]}><Text style={[s.chipText, stage === value && { color: c.onPrimary }]}>{value}</Text></Pressable>)}</ScrollView>
-      <View style={s.sectionHeading}><View style={[s.marker, { backgroundColor: '#ffb95f' }]} /><Text style={s.sectionTitle}>{catalog ? 'Catálogo de Performance' : 'Destaques de Performance'}</Text><Text style={s.micro}>TELEMETRY REF:{'\n'}04/24</Text></View>
+      <View style={s.sectionHeading}><View style={[s.marker, { backgroundColor: '#ffb95f' }]} /><Text style={s.sectionTitle}>{catalog ? 'Catálogo de Performance' : 'Destaques de Performance'}</Text><Text style={s.micro}>{filtered.length} PEÇAS</Text></View>
       {activeCategory !== '' && <Pressable accessibilityRole="button" onPress={clear} style={s.selectedFilter}><Text style={s.link}>{activeCategory} · Limpar filtro</Text><StoreIcon name="close" size={16} /></Pressable>}
-      <View style={s.grid}>{filtered.map(product => <View key={product.id} style={s.card}>
+      <View style={s.grid}>{visibleProducts.map(product => <View key={product.id} style={s.card}>
         <Pressable accessibilityRole="button" accessibilityLabel={`Ver detalhes de ${product.name}`} onPress={() => router.push({ pathname: '/product/[id]', params: { id: product.id } })}>
         <View style={s.media}><Image source={product.image} accessibilityLabel={product.name} style={s.productImage} resizeMode="contain" /><View style={[s.productBadge, { backgroundColor: product.tone }]}><Text style={[s.productBadgeText, { color: product.tone === '#e29100' || product.tone === '#00a6e0' ? '#071716' : c.text }]}>{product.badge}</Text></View></View>
         <Text style={s.sku}>SKU: {product.id}</Text><Text numberOfLines={2} style={s.productName}>{product.name}</Text><View style={s.fit}><StoreIcon name="check-circle-outline" color="#7bd0ff" size={12} /><Text numberOfLines={1} style={s.fitText}>{product.fit}</Text></View>
         </Pressable>
-        <View style={s.priceRow}><View style={s.priceColumn}><Text style={[s.priceLabel, product.oldPrice ? s.oldPrice : undefined]}>{product.oldPrice ? money(product.oldPrice) : 'À VISTA'}</Text><Text adjustsFontSizeToFit numberOfLines={1} style={s.price}>{money(product.price)}</Text></View><Pressable accessibilityRole="button" accessibilityLabel={`Adicionar ${product.name} ao carrinho`} onPress={() => add(product.id)} style={({ pressed }) => [s.add, pressed && s.pressed]}><StoreIcon name={cart[product.id] ? 'cart-check' : 'cart-plus'} size={21} />{cart[product.id] > 0 && <Text style={s.quantity}>{cart[product.id]}</Text>}</Pressable></View>
+        <View style={s.priceRow}><View style={s.priceColumn}><Text style={[s.priceLabel, product.oldPrice ? s.oldPrice : undefined]}>{product.oldPrice ? money(product.oldPrice) : 'À VISTA'}</Text><Text adjustsFontSizeToFit numberOfLines={1} style={s.price}>{money(product.price)}</Text></View><Pressable accessibilityRole="button" accessibilityLabel={`Adicionar ${product.name} ao carrinho`} disabled={(product.stock ?? 0) <= (cart[product.id] || 0)} onPress={() => add(product.id)} style={({ pressed }) => [s.add, pressed && s.pressed]}><StoreIcon name={cart[product.id] ? 'cart-check' : 'cart-plus'} size={21} />{cart[product.id] > 0 && <Text style={s.quantity}>{cart[product.id]}</Text>}</Pressable></View>
       </View>)}</View>
-      {filtered.length === 0 && <View style={s.empty}><StoreIcon name="magnify" size={32} /><Text style={s.sectionTitle}>Nenhuma peça encontrada</Text><Text style={s.body}>Experimente outra busca ou categoria.</Text><Pressable accessibilityRole="button" onPress={clear} style={s.smallAction}><Text style={s.link}>Limpar filtros</Text></Pressable></View>}
+      {!catalogLoading && !catalogError && filtered.length === 0 && <View style={s.empty}><StoreIcon name="magnify" size={32} /><Text style={s.sectionTitle}>Nenhuma peça encontrada</Text><Text style={s.body}>Experimente outra busca ou categoria.</Text><Pressable accessibilityRole="button" onPress={clear} style={s.smallAction}><Text style={s.link}>Limpar filtros</Text></Pressable></View>}
       {!catalog && <>
+        <Pressable accessibilityRole="button" onPress={openCatalog} style={s.configure}><Text style={s.link}>Ver catálogo completo →</Text></Pressable>
+        <Disclosure title="Simular ganho de potência">
         <View style={s.calculator}><View style={s.calcHeading}><StoreIcon name="speedometer" /><Text style={s.calcTitle}>Calculadora de Ganho Dinamômetro</Text><View style={s.ecu}><Text style={s.micro}>LIVE{'\n'}ECU</Text></View></View><Text style={s.body}>Simule o ganho de potência estimado combinando <Text style={{ color: c.text }}>Downpipe + Intake + Remap Stage 2</Text> para o seu motor.</Text><View style={s.metrics}>{[{ label: 'ORIGINAL', value: '230', unit: 'cv', color: c.text }, { label: 'COM SPEEDZONE', value: String(power), unit: 'cv', color: c.primary }, { label: 'GANHO TORQUE', value: '+' + ((power - 230) * 12.4 / 88).toFixed(1), unit: 'kgfm', color: '#7bd0ff' }].map(metric => <View key={metric.label} style={s.metric}><Text style={s.metricLabel}>{metric.label}</Text><Text style={[s.metricValue, { color: metric.color }]}>{metric.value}<Text style={s.unit}> {metric.unit}</Text></Text></View>)}</View><Pressable accessibilityRole="button" onPress={() => setSheet('package')} style={s.configure}><Text style={s.link}>Configurar Peças do Pacote</Text><StoreIcon name="chevron-right" size={18} /></Pressable></View>
-        <View style={s.trust}>{([{ icon: 'truck-delivery-outline', title: 'Envio Turbo c/ Rastreamento', text: 'Despacho no mesmo dia para pedidos até as 14h' }, { icon: 'check-decagram-outline', title: '100% Peças Originais & Billet', text: 'Certificação direta de fábrica e nota fiscal integral' }, { icon: 'headset', title: 'Suporte Técnico de Preparadores', text: 'Tire dúvidas de fitment e montagem com mecânicos reais' }] as const).map((item, index) => <View key={item.title} style={[s.trustRow, index > 0 && s.trustBorder]}><View style={s.trustIcon}><StoreIcon name={item.icon} /></View><View style={{ flex: 1 }}><Text style={s.trustTitle}>{item.title}</Text><Text style={s.body}>{item.text}</Text></View></View>)}</View>
+        </Disclosure>
+        <Disclosure title="Como funciona a SpeedZone"><View style={s.trust}>{([{ icon: 'truck-delivery-outline', title: 'Entrega simulada', text: 'Calcule uma estimativa no carrinho. Não há transportadora conectada.' }, { icon: 'check-decagram-outline', title: 'Catálogo de peças', text: 'Consulte as especificações e confirme a aplicação antes de comprar.' }, { icon: 'headset', title: 'Atendimento pelo app', text: 'Abra um chamado e acompanhe as respostas da equipe.' }] as const).map((item, index) => <View key={item.title} style={[s.trustRow, index > 0 && s.trustBorder]}><View style={s.trustIcon}><StoreIcon name={item.icon} /></View><View style={{ flex: 1 }}><Text style={s.trustTitle}>{item.title}</Text><Text style={s.body}>{item.text}</Text></View></View>)}</View></Disclosure>
       </>}
       <Text style={s.demo}>MODO DEMONSTRAÇÃO · CATÁLOGO ILUSTRATIVO</Text>
     </ScrollView>
     <Modal visible={sheet !== null} transparent animationType="slide" onRequestClose={() => setSheet(null)}><View style={s.overlay}><Pressable accessibilityRole="button" accessibilityLabel="Fechar painel" style={StyleSheet.absoluteFill} onPress={() => setSheet(null)} /><SafeAreaView edges={['bottom']} style={s.sheet}><View style={s.handle} /><View style={s.calcHeading}><Text style={s.calcTitle}>{sheet === 'garage' ? 'Sua garagem' : sheet === 'filter' ? 'Filtros de Performance' : 'Configure seu pacote'}</Text><Pressable accessibilityRole="button" accessibilityLabel="Fechar painel" onPress={() => setSheet(null)} style={s.smallAction}><StoreIcon name="close" /></Pressable></View>
-      {sheet === 'garage' && ['VW Golf GTI MK7.5 2.0 TSI', 'Audi A3 2.0 TFSI', 'VW Jetta GLI 2.0 TSI'].map(car => <Pressable accessibilityRole="radio" accessibilityState={{ checked: car === vehicle }} key={car} onPress={() => { setVehicle(car); setSheet(null); }} style={s.option}><StoreIcon name="car-sports" /><Text style={s.optionText}>{car}</Text>{vehicle === car && <StoreIcon name="check" />}</Pressable>)}
+      {sheet === 'garage' && <>{user?.cars.map(car => <Pressable accessibilityRole="radio" accessibilityState={{checked:car.id===user.activeCarId,disabled:garageBusy}} disabled={garageBusy} key={car.id} onPress={()=>void selectCar(car.id)} style={s.option}><StoreIcon name="car-sports"/><Text style={s.optionText}>{car.model}</Text>{car.id===user.activeCarId&&<StoreIcon name="check"/>}</Pressable>)}{!user?.cars.length&&<Text style={s.body}>Cadastre seu veículo em Conta para escolher o projeto ativo.</Text>}{!!garageError&&<Text accessibilityRole="alert" style={{color:c.error}}>{garageError}</Text>}<Pressable accessibilityRole="button" disabled={garageBusy} onPress={()=>{setSheet(null);router.navigate('/(main)/account');}} style={s.option}><Text style={s.link}>Gerenciar minha garagem →</Text></Pressable></>}
       {sheet === 'filter' && <><Text style={s.body}>Ordenação do catálogo</Text><Pressable accessibilityRole="checkbox" accessibilityState={{ checked: sort }} onPress={() => setSort(!sort)} style={s.option}><StoreIcon name={sort ? 'checkbox-marked' : 'checkbox-blank-outline'} /><Text style={s.optionText}>Menor preço primeiro</Text></Pressable><Text style={s.body}>Combine com as categorias e os estágios na tela.</Text></>}
       {sheet === 'package' && <><Text style={s.body}>Simulação ilustrativa para o Golf GTI. O resultado real depende do motor, combustível e preparação.</Text>{['Downpipe', 'Intake', 'Remap Stage 2'].map(part => <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: selectedParts.includes(part) }} key={part} style={s.option} onPress={() => setSelectedParts(old => old.includes(part) ? old.filter(p => p !== part) : [...old, part])}><StoreIcon name={selectedParts.includes(part) ? 'checkbox-marked' : 'checkbox-blank-outline'} /><Text style={s.optionText}>{part}</Text></Pressable>)}<Text style={s.price}>Potência estimada: {power} cv</Text></>}
       <Pressable accessibilityRole="button" onPress={() => setSheet(null)} style={s.cta}><Text style={s.ctaText}>Concluir</Text><StoreIcon name="check" color={c.onPrimary} /></Pressable>

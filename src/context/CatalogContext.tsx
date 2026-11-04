@@ -2,13 +2,18 @@ import { createContext, PropsWithChildren, useCallback, useContext, useEffect, u
 import { AppState } from 'react-native';
 import { useAuth } from './AuthContext';
 import { Product, products as seeds } from '../data/products';
-const Context = createContext<{ products: Product[]; refresh: () => Promise<void> }>({ products: [], refresh: async () => {} });
+const Context = createContext<{ products: Product[]; loading: boolean; error: string; refresh: () => Promise<void> }>({ products: [], loading: true, error: '', refresh: async () => {} });
 export function CatalogProvider({ children }: PropsWithChildren) {
   const { productRequest } = useAuth();
-  const [products, setProducts] = useState<Product[]>(seeds);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true), [error, setError] = useState('');
   const refresh = useCallback(async () => {
+    try {
     const data = await productRequest('/products');
     setProducts(data.products.map(p => ({ ...seeds.find(seed => seed.id === p.id), ...p, image: p.images[0] ? { uri: p.images[0] } : seeds.find(seed => seed.id === p.id)?.image || {}, badge: p.stock ? 'EM ESTOQUE' : 'ESGOTADO', tone: '#164535', fit: p.platforms.join(' • ') || 'Consulte a aplicação' })));
+    setError('');
+    } catch (cause) { setError((cause as Error).message); throw cause; }
+    finally { setLoading(false); }
   }, [productRequest]);
   useEffect(() => {
     // refresh updates state only after the API request resolves.
@@ -18,6 +23,6 @@ export function CatalogProvider({ children }: PropsWithChildren) {
     const listener = AppState.addEventListener('change', state => { if (state === 'active') void refresh().catch(() => {}); });
     return () => { clearInterval(timer); listener.remove(); };
   }, [refresh]);
-  return <Context.Provider value={{ products, refresh }}>{children}</Context.Provider>;
+  return <Context.Provider value={{ products, loading, error, refresh }}>{children}</Context.Provider>;
 }
 export const useCatalog = () => useContext(Context);

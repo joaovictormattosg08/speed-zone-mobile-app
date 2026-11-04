@@ -67,8 +67,6 @@ export default function PilotScreen() {
   const menu = [
     { icon: 'truck-outline' as const, title: 'Meus Pedidos & Entregas', description: 'Acompanhe seus pedidos', onPress: () => router.navigate('/(main)/orders'), color: c.primary },
     { icon: 'map-marker-outline' as const, title: 'Endereço de Entrega', description: user.address || 'Cadastre seu endereço principal', onPress: () => router.push('/address'), color: '#7bd0ff' },
-    { icon: 'credit-card-outline' as const, title: 'Formas de Pagamento', description: 'Pagamentos disponíveis em breve', onPress: () => showInfo('Formas de Pagamento', 'O processamento de pagamentos ainda não está conectado. Nenhum cartão é armazenado nesta versão.'), color: c.primary },
-    { icon: 'bell-ring-outline' as const, title: 'Alertas de Estoque & Peças', description: 'Seu próximo upgrade, no radar', onPress: () => showInfo('Alertas de Estoque', 'Os avisos estarão disponíveis quando o estoque e as notificações forem conectados.'), color: '#ffb95f' },
     { icon: 'headset' as const, title: 'Central de Suporte', description: 'Chamados, garantia e dúvidas técnicas', onPress: () => router.push('/support'), color: c.primary },
     { icon: 'shield-half-full' as const, title: 'Privacidade & Termos de Uso', description: 'Como seus dados são armazenados', onPress: () => showInfo('Privacidade nesta versão local', 'Sua conta, foto e garagem ficam no banco de dados deste computador. A senha é armazenada como hash. Use Sair da Conta para encerrar a sessão. Esta versão não possui serviço de e-mail, pagamento ou sincronização em nuvem. Os termos definitivos serão disponibilizados antes da publicação.'), color: c.muted },
   ];

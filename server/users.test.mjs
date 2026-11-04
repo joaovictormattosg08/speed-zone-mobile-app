@@ -33,7 +33,11 @@ test('user management: roles, session revocation, isolation, persistence and aud
   const unblocked=await call(path,'PATCH',{...blocked.user,blocked:false,role:'customer'},admin.token);assert.equal(unblocked.status,200);
   const customer=await call('/auth/login','POST',draft);assert.equal(customer.user.canSupport,false);
   assert.equal((await call('/admin/support','GET',undefined,customer.token)).status,403);
-  const archived=await call(path,'PATCH',{...unblocked.user,archived:true,reason:'Desativação de teste'},admin.token);assert.equal(archived.status,200);
+  assert.equal((await call('/me','PATCH',{name:'Nome atualizado pelo cliente'},customer.token)).status,200);
+  assert.equal((await call(path,'PATCH',{...unblocked.user,name:'Formulário antigo'},admin.token)).status,409);
+  const current=(await call('/admin/users','GET',undefined,admin.token)).users.find(u=>u.id===created.user.id);
+  assert.equal(current.name,'Nome atualizado pelo cliente');
+  const archived=await call(path,'PATCH',{...current,archived:true,reason:'Desativação de teste'},admin.token);assert.equal(archived.status,200);
   assert.equal((await call('/auth/login','POST',draft)).status,403);
   assert.equal((await call('/me','GET',undefined,customer.token)).status,401);
   assert.equal((await call(path+'/logs','GET',undefined,admin.token)).logs.length,4);

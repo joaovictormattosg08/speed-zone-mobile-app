@@ -60,7 +60,7 @@ export default function AuthScreen() {
 
           <View style={s.panel}>
             <View style={s.panelHeading}><View style={s.titleGroup}><View style={s.dot} /><Text style={s.panelTitle}>{recovery ? 'Recuperar acesso' : register ? 'Cadastro do Piloto' : 'Credenciais do Piloto'}</Text></View><Text style={s.stage}>{recovery ? 'PIT STOP' : register ? 'STAGE-0' : 'STAGE-1 AUTH'}</Text></View>
-            {recovery && <Text style={s.description}>Informe o e-mail da sua conta para recuperar a chave da sua garagem.</Text>}
+            {recovery && <Text style={s.description}>A recuperação por e-mail ainda não está disponível nesta versão local.</Text>}
             {register && <View style={s.names}><View style={s.flex}><AuthField label="Primeiro Nome" icon="account-outline" placeholder="Lucas" value={name} onChangeText={setName} autoComplete="given-name" /></View><View style={s.flex}><AuthField label="Sobrenome" icon="account-outline" placeholder="Silveira" value={surname} onChangeText={setSurname} autoComplete="family-name" /></View></View>}
             <AuthField label={register ? 'E-mail Principal' : 'E-mail Registrado'} icon="at" placeholder="piloto@speedzone.com.br" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" autoCorrect={false} autoComplete="email" returnKeyType="next" />
             {!recovery && <AuthField label={register ? 'Criar Senha' : 'Senha de Acesso'} hint="8+ CARACTERES" icon="lock-outline" placeholder="••••••••••••" value={password} onChangeText={setPassword} password autoCapitalize="none" autoCorrect={false} autoComplete={register ? 'new-password' : 'current-password'} returnKeyType="go" onSubmitEditing={submit} />}
@@ -70,11 +70,6 @@ export default function AuthScreen() {
             {message !== '' && <View accessibilityLiveRegion="polite" style={s.notice}><Icon name={isError ? 'alert-circle-outline' : 'information-outline'} color={isError ? colors.error : colors.primary} size={18} /><Text style={[s.noticeText, isError && { color: colors.error }]}>{message}</Text></View>}
             {recovery && <Pressable accessibilityRole="button" onPress={() => changeMode('login')} style={s.back}><Text style={s.link}>Voltar para entrar</Text></Pressable>}
           </View>
-
-          {!register && !recovery && <View style={s.alternatives}>
-            <Pressable accessibilityRole="button" onPress={() => notice('O acesso por biometria estará disponível após a ativação da sua conta.')} style={({ pressed }) => [s.biometric, pressed && s.pressed]}><Icon name="fingerprint" size={24} /><Text style={s.biometricText}>Entrar com Biometria / Face ID</Text><View style={s.instant}><Text style={s.instantText}>INSTANTÂNEO</Text></View></Pressable>
-            <View style={s.socialRow}>{([{ label: 'Google', icon: 'google' }, { label: 'Apple ID', icon: 'apple' }] as const).map(provider => <Pressable key={provider.label} accessibilityRole="button" accessibilityLabel={'Entrar com ' + provider.label} onPress={() => notice('O acesso com ' + provider.label + ' estará disponível em breve.')} style={({ pressed }) => [s.social, pressed && s.pressed]}><Icon name={provider.icon} size={22} color={colors.text} /><Text style={s.socialText}>{provider.label}</Text></Pressable>)}</View>
-          </View>}
 
           <View style={s.footer}><View style={s.trustRow}><View style={s.trustItem}><Icon name="check-decagram-outline" size={18} /><Text style={s.trustText}>ACESSO PROTEGIDO</Text></View><View style={s.separator} /><View style={s.trustItem}><Icon name="shield-half-full" size={18} /><Text style={s.trustText}>PRIVACIDADE</Text></View></View><Text style={s.footerText}>Sua paixão por performance merece uma garagem à altura. Bem-vindo à SpeedZone Motorsport.</Text></View>
         </View>
