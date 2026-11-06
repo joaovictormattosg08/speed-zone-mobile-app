@@ -1,3 +1,4 @@
+import { palette as speedPalette } from '../theme/tokens';
 import { createContext, PropsWithChildren, useCallback, useContext, useEffect, useState } from 'react';
 import { AppState } from 'react-native';
 import { useAuth } from './AuthContext';
@@ -10,7 +11,7 @@ export function CatalogProvider({ children }: PropsWithChildren) {
   const refresh = useCallback(async () => {
     try {
     const data = await productRequest('/products');
-    setProducts(data.products.map(p => ({ ...seeds.find(seed => seed.id === p.id), ...p, image: p.images[0] ? { uri: p.images[0] } : seeds.find(seed => seed.id === p.id)?.image || {}, badge: p.stock ? 'EM ESTOQUE' : 'ESGOTADO', tone: '#164535', fit: p.platforms.join(' • ') || 'Consulte a aplicação' })));
+    setProducts(data.products.map(p => ({ ...seeds.find(seed => seed.id === p.id), ...p, image: p.images[0] ? { uri: p.images[0] } : seeds.find(seed => seed.id === p.id)?.image || {}, badge: p.stock ? 'EM ESTOQUE' : 'ESGOTADO', tone: speedPalette.darkGreen, fit: p.platforms.join(' • ') || 'Consulte a aplicação' })));
     setError('');
     } catch (cause) { setError((cause as Error).message); throw cause; }
     finally { setLoading(false); }

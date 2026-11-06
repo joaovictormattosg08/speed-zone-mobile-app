@@ -1,3 +1,4 @@
+import { palette as speedPalette, colors as c, fonts as f } from '../theme/tokens';
 import { useCallback, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Image, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
@@ -7,7 +8,6 @@ import { SupportTicket, supportCategories } from '../data/support';
 import { ProductAction, ps as s } from '../components/AdminProductUI';
 import { PilotAvatar } from '../components/PilotAvatar';
 import { StoreIcon } from '../components/StoreHeader';
-import { colors as c, fonts as f } from '../theme/tokens';
 type Draft = { text: string; status: 'open' | 'closed'; version: string; key?: string };
 const categoryName = (ticket: SupportTicket) => supportCategories.find(category => category.id === ticket.category)?.label || ticket.category;
 const date = (value: string) => new Date(value).toLocaleString('pt-BR', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
@@ -46,4 +46,4 @@ export default function AdminSupportScreen() {
     <Modal visible={!!historyId} transparent animationType="slide" onRequestClose={closeHistory}><View style={[s.overlay,{justifyContent:'flex-end',padding:12}]}><View style={[s.card,{maxHeight:'90%'}]}><View style={s.between}><Text style={s.section}>Conversa #{historyId}</Text><ProductAction label="Fechar" onPress={closeHistory}/></View><ScrollView contentContainerStyle={{gap:14}}>{history?<><Text style={s.body}>{history.name} • {history.vehicle}</Text><Text style={s.eyebrow}>CLIENTE • {date(history.createdAt)}</Text><Text selectable style={s.body}>{history.description}</Text>{history.attachment&&<Image accessibilityLabel="Evidência enviada pelo cliente" source={{uri:history.attachment}} resizeMode="contain" style={{width:'100%',height:280}}/>}{history.messages.map(message=><View key={message.author+message.id} style={[local.question,message.author==='team'&&{borderLeftColor:c.primary,borderLeftWidth:3}]}><Text style={s.eyebrow}>{message.author==='team'?`EQUIPE • ${message.authorName||'SpeedZone'}`:history.name} • {date(message.createdAt)}</Text><Text selectable style={s.body}>{message.text}</Text></View>)}<Text style={s.small}>{history.status==='closed'?'CHAMADO RESOLVIDO':'CHAMADO ATIVO'}</Text></>:historyError?<Text style={s.error}>{historyError}</Text>:<ActivityIndicator color={c.primary}/>}</ScrollView></View></View></Modal>
   </SafeAreaView>;
 }
-const local=StyleSheet.create({customer:{backgroundColor:c.deepest,padding:12,flexDirection:'row',alignItems:'center',gap:12,borderRadius:5},initials:{width:42,height:42,backgroundColor:c.elevated,alignItems:'center',justifyContent:'center',borderRadius:5},blue:{color:'#7bd0ff',fontFamily:f.medium,fontSize:12},category:{color:'#ffb95f',fontFamily:f.medium,fontSize:11},question:{backgroundColor:c.deepest,padding:14,borderRadius:5,gap:8},questionText:{fontFamily:f.regular,fontSize:15,lineHeight:23,color:c.text}});
+const local=StyleSheet.create({customer:{backgroundColor:c.deepest,padding:12,flexDirection:'row',alignItems:'center',gap:12,borderRadius:5},initials:{width:42,height:42,backgroundColor:c.elevated,alignItems:'center',justifyContent:'center',borderRadius:5},blue:{color:speedPalette.speedGreen,fontFamily:f.medium,fontSize:12},category:{color:'#ffb95f',fontFamily:f.medium,fontSize:11},question:{backgroundColor:c.deepest,padding:14,borderRadius:5,gap:8},questionText:{fontFamily:f.regular,fontSize:15,lineHeight:23,color:c.text}});

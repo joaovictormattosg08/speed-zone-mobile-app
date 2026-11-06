@@ -1,3 +1,4 @@
+import { palette as speedPalette } from '../theme/tokens';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Image, Text, TextInput, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -26,7 +27,7 @@ export default function AdminUserFormScreen() {
     try { const entries = await userLogs(record.id); setLogs(entries.map(e => `${new Date(e.createdAt).toLocaleString('pt-BR')} · ${e.action}`)); } catch (e) { setError((e as Error).message); } finally { lock.current = false; setBusy(false); }
   }
   return <AdminDetail title="Editar Usuário & Permissões" back="/admin-users" busy={busy} footer={<View style={s.row}><View style={s.flex}><ProductAction label="Cancelar" disabled={busy} onPress={() => router.replace('/admin-users')} /></View><View style={{ flex: 2 }}><ProductAction primary label={busy ? 'Salvando…' : '✓ Salvar Alterações'} disabled={busy || loading || !draft} onPress={() => void save()} /></View></View>}>
-    {loading && <ActivityIndicator color="#4edea3" />}{!!error && <View style={s.card}><Text accessibilityRole="alert" style={s.error}>{error}</Text><ProductAction label="Recarregar cadastro" disabled={busy} onPress={() => { setLoading(true); setRetry(v => v + 1); }} /></View>}{!!notice && <Text accessibilityLiveRegion="polite" style={s.green}>{notice}</Text>}
+    {loading && <ActivityIndicator color={speedPalette.speedGreen} />}{!!error && <View style={s.card}><Text accessibilityRole="alert" style={s.error}>{error}</Text><ProductAction label="Recarregar cadastro" disabled={busy} onPress={() => { setLoading(true); setRetry(v => v + 1); }} /></View>}{!!notice && <Text accessibilityLiveRegion="polite" style={s.green}>{notice}</Text>}
     {record && draft && !loading && <>
       <Text style={s.eyebrow}>VOLTAR P/ USUÁRIOS · ID #{record.id}</Text>
       <View style={s.row}>{record.photo ? <Image source={{ uri: record.photo }} style={{ width: 76, height: 82, borderRadius: 6 }} /> : <View style={[s.chip, { width: 66, height: 76, justifyContent: 'center', alignItems: 'center' }]}><Text style={s.price}>{record.name[0]}{record.surname[0]}</Text></View>}<View style={s.flex}><Text style={s.title}>{record.name} {record.surname}</Text><Text style={s.body}>{record.email}</Text><Text style={s.eyebrow}>{record.archived ? 'DESATIVADO' : record.blocked ? 'BLOQUEADO' : '● ATIVO'} · {roleLabels[record.role]}</Text></View></View>

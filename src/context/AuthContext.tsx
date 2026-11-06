@@ -25,9 +25,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const [loading, setLoading] = useState(true);
   const [startupError, setStartupError] = useState('');
   const token = useRef<string | null>(null);
-  const request = useCallback(async (path: string, method = 'GET', body?: unknown) => {
+  const request = useCallback(async (path: string, method = 'GET', body?: unknown, timeoutMs = 15000) => {
     let response: Response;
-    const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), 15000);
+    const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), timeoutMs);
     try { response = await fetch(`${api}${path}`, { method, credentials: 'include', signal: controller.signal, headers: { ...(body ? { 'Content-Type': 'application/json' } : {}), ...(token.current ? { Authorization: `Bearer ${token.current}` } : {}) }, ...(body ? { body: JSON.stringify(body) } : {}) }); }
     catch { throw new Error(`Não foi possível conectar à API em ${api}. Confira se a API está rodando e se este endereço é acessível no dispositivo.`); }
     finally { clearTimeout(timer); }
@@ -39,8 +39,16 @@ export function AuthProvider({ children }: PropsWithChildren) {
     return data;
   }, []);
   const restore = useCallback(async () => {
-    try { if (Platform.OS !== 'web') token.current = await SecureStore.getItemAsync(key); const data = await request('/me'); setUser(data.user); }
-    catch (error) { if ((error as { status?: number }).status !== 401) setStartupError((error as Error).message); }
+    try {
+      if (Platform.OS !== 'web') {
+        token.current = await SecureStore.getItemAsync(key);
+        // Without a saved native session, login does not need a network round trip.
+        if (!token.current) return;
+      }
+      const data = await request('/me', 'GET', undefined, 8000);
+      setUser(data.user);
+    }
+    catch (error) { if ((error as { status?: number }).status !== 401) setStartupError('Confira sua conexão com a internet e tente novamente. Seus itens salvos continuam neste aparelho.'); }
     finally { setLoading(false); }
   }, [request]);
   // State is updated only after the asynchronous session request resolves.
