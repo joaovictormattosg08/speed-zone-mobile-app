@@ -1,10 +1,12 @@
-import { palette as speedPalette } from '../theme/tokens';
+import { useTheme , useThemedStyles } from '../theme/ThemeContext';
+import { ThemeColors , palette as speedPalette } from '../theme/tokens';
+
 import { Disclosure } from '../components/Disclosure';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
-import { AdminProductShell, ProductAction, ps as s } from '../components/AdminProductUI';
+import { AdminProductShell, ProductAction, createPs } from '../components/AdminProductUI';
 import { ConfirmAction } from '../components/AdminDetailUI';
 import { useAuth } from '../context/AuthContext';
 import { useCatalog } from '../context/CatalogContext';
@@ -12,10 +14,17 @@ import { InventoryProduct } from '../data/inventory';
 import { categories, money, products as seeds } from '../data/products';
 const empty: InventoryProduct = { id:'',name:'',category:'Turbo',subcategory:'',stage:'STAGE 1',price:0,cost:0,stock:0,minimum:3,published:false,images:[],platforms:[],power:'',diameter:'',material:'',description:'',revision:0 };
 function Field({ label, value, onChange, numeric = false, multiline = false, disabled = false }: { label:string; value:string; onChange:(value:string)=>void; numeric?:boolean; multiline?:boolean; disabled?:boolean }) {
+  const s = useThemedStyles(createPs);
+
   return <View style={{flex:1}}><Text style={s.label}>{label}</Text><TextInput accessibilityLabel={label} value={value} onChangeText={onChange} editable={!disabled} keyboardType={numeric?'decimal-pad':'default'} multiline={multiline} style={[s.input,multiline&&{minHeight:100,textAlignVertical:'top'}]} /></View>;
 }
 const numberOf = (text: string) => /^\d+(?:[.,]\d{1,2})?$/.test(text.trim()) ? Number(text.replace(',','.')) : NaN;
 export default function AdminProductFormScreen() {
+  const { colors: c } = useTheme();
+
+  const local = useThemedStyles(createLocal);
+  const s = useThemedStyles(createPs);
+
   const params = useLocalSearchParams<{id?:string;preview?:string}>(); const id = params.id;
   const { productRequest } = useAuth(); const { refresh } = useCatalog();
   const [draft,setDraft] = useState<InventoryProduct>(empty), [values,setValues] = useState({price:'',cost:'0',stock:'0',minimum:'3'});
@@ -64,7 +73,7 @@ export default function AdminProductFormScreen() {
   return <AdminProductShell footer={<View style={[s.footer,s.row]}><View style={s.flex}><ProductAction label="Cancelar" disabled={busy} onPress={()=>router.replace('/admin-products')} /></View><View style={{flex:2}}><ProductAction primary label={busy?'Salvando…':preview?'Editar Produto':'✓ Salvar Alterações'} disabled={loading||busy||picking||(!!id&&!draft.id)} onPress={()=>preview?setPreview(false):void save()} /></View></View>}>
     <KeyboardAvoidingView style={s.flex} behavior={Platform.OS==='ios'?'padding':undefined}><ScrollView ref={scroll} keyboardShouldPersistTaps="handled" contentContainerStyle={s.content}>
       <ProductAction label="← Voltar para Produtos" disabled={busy} onPress={()=>router.replace('/admin-products')} /><View><Text style={s.eyebrow}>IDENTIFICAÇÃO & HOMOLOGAÇÃO</Text><Text style={s.title}>{preview?'Inspecionar Produto':id?'Editar Produto':'Cadastrar Novo Produto'}</Text><Text style={s.body}>Especificações, calibração e disponibilidade da peça.</Text></View>
-      {!!error&&<Text accessibilityRole="alert" style={s.error}>{error}</Text>}{loading?<ActivityIndicator color={speedPalette.speedGreen}/>:preview?<><View style={s.card}><Image source={image} style={{width:'100%',height:260,borderRadius:6}}/><Text style={s.eyebrow}>{draft.id} • {draft.published?'PUBLICADO':'RASCUNHO'}</Text><Text style={s.title}>{draft.name}</Text><Text style={s.price}>{money(draft.price)}</Text><Text style={s.body}>{draft.stock} unidades • mínimo {draft.minimum}</Text><Text style={s.body}>{draft.category} / {draft.subcategory} • {draft.stage}</Text><Text style={s.body}>{draft.description}</Text><Text style={s.green}>{draft.platforms.join(' • ')}</Text>{[draft.power,draft.diameter,draft.material].filter(Boolean).map((v,i)=><Text key={i} style={s.body}>{v}</Text>)}<ScrollView horizontal>{draft.images.slice(1).map((uri,i)=><Image key={i} source={{uri}} style={s.image}/>)}</ScrollView></View></>:<>
+      {!!error&&<Text accessibilityRole="alert" style={s.error}>{error}</Text>}{loading?<ActivityIndicator color={c.primary}/>:preview?<><View style={s.card}><Image source={image} style={{width:'100%',height:260,borderRadius:6}}/><Text style={s.eyebrow}>{draft.id} • {draft.published?'PUBLICADO':'RASCUNHO'}</Text><Text style={s.title}>{draft.name}</Text><Text style={s.price}>{money(draft.price)}</Text><Text style={s.body}>{draft.stock} unidades • mínimo {draft.minimum}</Text><Text style={s.body}>{draft.category} / {draft.subcategory} • {draft.stage}</Text><Text style={s.body}>{draft.description}</Text><Text style={s.green}>{draft.platforms.join(' • ')}</Text>{[draft.power,draft.diameter,draft.material].filter(Boolean).map((v,i)=><Text key={i} style={s.body}>{v}</Text>)}<ScrollView horizontal>{draft.images.slice(1).map((uri,i)=><Image key={i} source={{uri}} style={s.image}/>)}</ScrollView></View></>:<>
       <View style={s.card}>
         <View style={s.between}><Text style={[s.section,s.flex]}>Documentação Visual & Técnica</Text><Text style={s.small}>{draft.images.length}/5 SLOTS</Text></View>
         {image ? <View style={local.hero}>
@@ -90,10 +99,10 @@ export default function AdminProductFormScreen() {
     </ScrollView></KeyboardAvoidingView>
   </AdminProductShell>;
 }
-const local=StyleSheet.create({
+const createLocal = (c: ThemeColors) => StyleSheet.create({
  hero:{position:'relative',borderRadius:6,overflow:'hidden',backgroundColor:speedPalette.carbonBlack},
  heroImage:{width:'100%',aspectRatio:1.6},
- heroLabel:{position:'absolute',top:10,left:10,color:speedPalette.speedGreen,backgroundColor:speedPalette.carbonBlack + 'dd',fontSize:10,fontWeight:'700',padding:5},
+ heroLabel:{position:'absolute',top:10,left:10,color:c.primary,backgroundColor:speedPalette.carbonBlack + 'dd',fontSize:10,fontWeight:'700',padding:5},
  heroActions:{position:'absolute',bottom:8,right:8,flexDirection:'row',gap:6},
  emptyPhoto:{minHeight:210,alignItems:'center',justifyContent:'center',gap:12,backgroundColor:speedPalette.carbonBlack,borderRadius:6,padding:16},
  thumbnail:{width:122,gap:8},thumbnailImage:{width:122,height:100,borderRadius:4},

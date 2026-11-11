@@ -1,9 +1,10 @@
-import { palette as speedPalette, colors as c } from '../theme/tokens';
+import { useTheme, useThemedStyles } from '../theme/ThemeContext';
+import { palette as speedPalette } from '../theme/tokens';
 import { useCallback, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Image, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Switch, Text, TextInput, View } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ProductAction, ps as s } from '../components/AdminProductUI';
+import { ProductAction, createPs } from '../components/AdminProductUI';
 import { StoreIcon } from '../components/StoreHeader';
 import { PilotAvatar } from '../components/PilotAvatar';
 import { useAuth } from '../context/AuthContext';
@@ -12,6 +13,9 @@ import { money } from '../data/products';
 const empty:UserDraft={name:'',surname:'',email:'',phone:'',password:'',role:'customer',blocked:false,archived:false,reason:'',revision:1};
 const permissions:Record<UserRole,string>={customer:'Acesso à loja, à própria conta, pedidos e chamados.',technician:'Acesso à loja e ao painel de suporte para responder chamados. Sem gestão de usuários, produtos ou vendas.',admin:'Acesso completo ao painel, incluindo usuários, permissões, produtos, vendas e suporte.'};
 export default function AdminUsersScreen() {
+  const { colors: c } = useTheme();
+  const s = useThemedStyles(createPs);
+
   const {user,listUsers,saveUser,userLogs}=useAuth();
   const [users,setUsers]=useState<ManagedUser[]>([]),[loading,setLoading]=useState(true),[error,setError]=useState(''),[notice,setNotice]=useState(''),[revision,setRevision]=useState(0);
   const [query,setQuery]=useState(''),[filter,setFilter]=useState('all'),[sort,setSort]=useState<'recent'|'name'>('recent'),[page,setPage]=useState(1);

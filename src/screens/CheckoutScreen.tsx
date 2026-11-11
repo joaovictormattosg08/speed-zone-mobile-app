@@ -1,4 +1,4 @@
-import { palette as speedPalette } from '../theme/tokens';
+import { useTheme , useThemedStyles } from '../theme/ThemeContext';
 import { CatalogStatus } from '../components/CatalogStatus';
 import { useCoupons } from '../hooks/useCoupons';
 import { useCatalog } from '../context/CatalogContext';
@@ -13,9 +13,13 @@ import { useAuth } from '../context/AuthContext';
 import { useStore } from '../context/StoreContext';
 
 import { calculateCart, ShippingChoice } from '../utils/cartPricing';
-import { checkoutStyles as s, Amount, CheckoutButton, CheckoutHeader, OrderTotals } from '../components/CheckoutUI';
+import { createCheckoutStyles, Amount, CheckoutButton, CheckoutHeader, OrderTotals } from '../components/CheckoutUI';
 
 export default function CheckoutScreen() {
+  const { colors: c } = useTheme();
+
+  const s = useThemedStyles(createCheckoutStyles);
+
   const { products, loading: catalogLoading, error: catalogError } = useCatalog();
   const params = useLocalSearchParams<{ coupon?: string; cep?: string; service?: string }>();
   const loyalty = useLoyalty();
@@ -66,7 +70,7 @@ export default function CheckoutScreen() {
     {unavailable&&<Text style={s.error}>Há peças indisponíveis. Volte ao carrinho para revisar.</Text>}
     <View style={[s.card, s.row]}>{['Carrinho', 'Entrega', 'Pagamento', 'Revisão'].map((label, index) => <View key={label} style={s.step}><View style={[s.stepIcon, index <= step && s.active]}><Text style={s.stepNumber}>{index < step ? '✓' : index + 1}</Text></View><Text style={[s.micro, index === step && s.green]}>{label.toUpperCase()}</Text></View>)}</View>
     {!items.length ? <View style={s.card}><Text style={s.title}>Seu carrinho está vazio</Text><CheckoutButton label="Voltar ao catálogo" onPress={() => router.replace('/(main)/catalog')} /></View> : <>
-    {step === 1 && <><Text style={s.title}>⌖ PONTO DE ENTREGA</Text><View style={s.card}><Text style={s.green}>ENDEREÇO DA GARAGEM</Text><Text style={s.title}>{recipient}</Text><Text style={s.body}>{address || 'Cadastre seu endereço de entrega para continuar.'}</Text><CheckoutButton label={savedCep ? 'ALTERAR ENDEREÇO' : 'CADASTRAR ENDEREÇO'} onPress={() => router.push('/address')} /></View>{savedCep && <CartShipping key={savedCep} subtotal={totals.subtotal} selected={delivery} onSelect={setDelivery} lockedCep={savedCep} />}<View style={s.card}><Text style={s.title}>Instruções especiais de peças</Text><Text style={s.body}>Orientações de entrega e cuidados com o pacote (opcional).</Text><TextInput accessibilityLabel="Instruções de entrega" value={instructions} onChangeText={setInstructions} maxLength={1000} multiline placeholder="Ex.: deixar na portaria com o responsável..." placeholderTextColor={speedPalette.lightGray} style={[s.input, s.textarea]} /></View></>}
+    {step === 1 && <><Text style={s.title}>⌖ PONTO DE ENTREGA</Text><View style={s.card}><Text style={s.green}>ENDEREÇO DA GARAGEM</Text><Text style={s.title}>{recipient}</Text><Text style={s.body}>{address || 'Cadastre seu endereço de entrega para continuar.'}</Text><CheckoutButton label={savedCep ? 'ALTERAR ENDEREÇO' : 'CADASTRAR ENDEREÇO'} onPress={() => router.push('/address')} /></View>{savedCep && <CartShipping key={savedCep} subtotal={totals.subtotal} selected={delivery} onSelect={setDelivery} lockedCep={savedCep} />}<View style={s.card}><Text style={s.title}>Instruções especiais de peças</Text><Text style={s.body}>Orientações de entrega e cuidados com o pacote (opcional).</Text><TextInput accessibilityLabel="Instruções de entrega" value={instructions} onChangeText={setInstructions} maxLength={1000} multiline placeholder="Ex.: deixar na portaria com o responsável..." placeholderTextColor={c.muted} style={[s.input, s.textarea]} /></View></>}
     {step === 2 && <View style={s.card}><Text style={s.title}>Forma de pagamento</Text><Text style={s.body}>Escolha a opção para a simulação. Não haverá cobrança nem coleta de dados de cartão.</Text>{(['pix', 'card'] as const).map(value => <Pressable key={value} accessibilityRole="radio" accessibilityState={{ checked: payment === value }} onPress={() => setPayment(value)} style={[s.option, payment === value && s.selected]}><StoreIcon name={value === 'pix' ? 'qrcode' : 'credit-card-outline'} /><View style={s.flex}><Text style={s.title}>{value === 'pix' ? 'PIX' : 'Cartão de crédito'}</Text><Text style={s.body}>Simulação • sem processamento financeiro</Text></View><StoreIcon name={payment === value ? 'radiobox-marked' : 'radiobox-blank'} /></Pressable>)}</View>}
     {step === 3 && <View style={s.card}><Text style={s.title}>Revise seu pedido</Text><Text style={s.green}>{recipient}</Text><Text style={s.body}>{address}</Text><Text style={s.body}>CEP {delivery?.cep} • {delivery?.service === 'express' ? 'Express' : 'Econômica'}</Text><Text style={s.body}>Pagamento escolhido: {payment === 'pix' ? 'PIX' : 'Cartão de crédito'} (simulado)</Text>{!!instructions && <Text style={s.body}>Instruções: {instructions}</Text>}<Text style={s.note}>Ao confirmar, o pedido será salvo em sua conta. Nenhum pagamento ou envio real será realizado.</Text></View>}
     <View style={s.card}><Text style={s.title}>▣ PACOTE MOTORSPORT</Text>{items.map(item => <View key={item.id} style={s.row}><Text style={[s.body, s.flex]}>{item.name}</Text><Text style={s.body}>{item.quantity}x</Text></View>)}<OrderTotals {...totals} coupon={totals.validCoupon} /><Text style={s.note}>Frete e prazos de demonstração.</Text></View>

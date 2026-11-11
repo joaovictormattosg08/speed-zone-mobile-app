@@ -1,4 +1,6 @@
-import { palette as speedPalette, colors as c, fonts as f } from '../theme/tokens';
+import { ThemeColors , fonts as f } from '../theme/tokens';
+import { useTheme, useThemedStyles } from '../theme/ThemeContext';
+
 import { useAuth } from '../context/AuthContext';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -7,6 +9,9 @@ import { StoreIcon } from './StoreHeader';
 import { money } from '../data/products';
 
 export function CartShipping({ subtotal, selected, onSelect, lockedCep }: { lockedCep?: string; subtotal: number; selected: ShippingChoice | null; onSelect: (value: ShippingChoice | null) => void }) {
+  const { colors: c } = useTheme();
+  const s = useThemedStyles(createS);
+
   const { user } = useAuth();
   const initialCep = lockedCep || selected?.cep || user?.deliveryAddress?.cep || '';
   const [cep, setCep] = useState(initialCep);
@@ -29,4 +34,4 @@ export function CartShipping({ subtotal, selected, onSelect, lockedCep }: { lock
     <Text style={s.note}>Valores e prazos ilustrativos por faixa de CEP. A existência do CEP e a cobertura de entrega não são consultadas. Frete grátis a partir de R$ 6.500 em produtos.</Text>
   </View>;
 }
-const s = StyleSheet.create({ panel: { borderWidth: 1, borderColor: c.surfaceBorder, backgroundColor: c.input, padding: 14, borderRadius: 9, gap: 12 }, heading: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 7 }, title: { color: c.text, fontFamily: f.medium, fontSize: 15, flexGrow: 1 }, badge: { color: c.primary, fontFamily: f.bold, fontSize: 9, backgroundColor: speedPalette.darkGreen, padding: 4, borderRadius: 3 }, body: { color: c.muted, fontFamily: f.regular, fontSize: 12, lineHeight: 18 }, row: { flexDirection: 'row', gap: 8 }, input: { borderWidth: 1, borderColor: c.border, minWidth: 0, flex: 1, height: 48, borderRadius: 4, backgroundColor: c.elevated, color: c.text, fontFamily: f.medium, paddingHorizontal: 12, fontSize: 15 }, calculate: { backgroundColor: c.primary, paddingHorizontal: 12, justifyContent: 'center', borderRadius: 4, minHeight: 48 }, calculateText: { color: c.onPrimary, fontFamily: f.bold, fontSize: 12 }, option: { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderColor: c.elevated, backgroundColor: c.panel, padding: 12, borderRadius: 6, minHeight: 76 }, selected: { borderColor: c.primary, backgroundColor: speedPalette.darkGreen }, optionTitle: { color: c.text, fontFamily: f.medium, fontSize: 13 }, price: { color: c.primary, fontFamily: f.bold, fontSize: 14 }, note: { color: c.subtle, fontFamily: f.regular, fontSize: 10, lineHeight: 15 }, error: { color: c.error, fontFamily: f.regular, fontSize: 12 } });
+const createS = (c: ThemeColors) => StyleSheet.create({ panel: { borderWidth: 1, borderColor: c.surfaceBorder, backgroundColor: c.input, padding: 14, borderRadius: 24, gap: 12 }, heading: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 7 }, title: { color: c.text, fontFamily: f.medium, fontSize: 15, flexGrow: 1 }, badge: { color: c.primary, fontFamily: f.bold, fontSize: 9, backgroundColor: c.primarySoft, padding: 4, borderRadius: 3 }, body: { color: c.muted, fontFamily: f.regular, fontSize: 12, lineHeight: 18 }, row: { flexDirection: 'row', gap: 8 }, input: { borderWidth: 1, borderColor: c.border, minWidth: 0, flex: 1, height: 48, borderRadius: 4, backgroundColor: c.elevated, color: c.text, fontFamily: f.medium, paddingHorizontal: 12, fontSize: 15 }, calculate: { backgroundColor: c.primary, paddingHorizontal: 12, justifyContent: 'center', borderRadius: 4, minHeight: 48 }, calculateText: { color: c.onPrimary, fontFamily: f.bold, fontSize: 12 }, option: { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderColor: c.elevated, backgroundColor: c.panel, padding: 12, borderRadius: 6, minHeight: 76 }, selected: { borderColor: c.primary, backgroundColor: c.primarySoft }, optionTitle: { color: c.text, fontFamily: f.medium, fontSize: 13 }, price: { color: c.primary, fontFamily: f.bold, fontSize: 14 }, note: { color: c.subtle, fontFamily: f.regular, fontSize: 10, lineHeight: 15 }, error: { color: c.error, fontFamily: f.regular, fontSize: 12 } });

@@ -5,7 +5,7 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/speedzone-icon.png",
-    "userInterfaceStyle": "dark",
+    "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true
     },
@@ -23,6 +23,7 @@
     "plugins": [
       "expo-router",
       "expo-font",
+      "expo-system-ui",
       "expo-secure-store",
       [
         "expo-image-picker",

@@ -1,3 +1,4 @@
+import Constants from 'expo-constants';
 import { CouponBenefit, Promotion, PromotionDraft } from '../data/coupons';
 import { ManagedUser, UserDraft, UserLog } from '../data/users';
 import { InventoryProduct } from '../data/inventory';
@@ -17,8 +18,11 @@ type Credentials = { email: string; password: string; remember: boolean; name?: 
 type Auth = { listCoupons: () => Promise<CouponBenefit[]>; listAdminCoupons: () => Promise<Promotion[]>; saveCoupon: (code: string | null, body: PromotionDraft) => Promise<Promotion>; listUsers: () => Promise<ManagedUser[]>; saveUser: (id: string | null, body: UserDraft) => Promise<ManagedUser>; userLogs: (id: string) => Promise<UserLog[]>; listAdminTickets: () => Promise<SupportTicket[]>; getAdminTicket: (id: string) => Promise<SupportTicket>; respondTicket: (id: string, values: { text: string; status: 'open' | 'closed'; requestKey: string; expectedUpdatedAt: string }) => Promise<SupportTicket>; productRequest: (path: string, method?: string, body?: unknown) => Promise<{ products: InventoryProduct[]; product: InventoryProduct }>; listAdminOrders: () => Promise<AdminOrder[]>; changeOrderStatus: (id: string, status: OrderStatus, expectedStatus: OrderStatus) => Promise<Order>; getAdminOverview: () => Promise<AdminOverview>; getLoyalty: () => Promise<Loyalty>; redeemReward: (rewardId: string, requestKey: string) => Promise<LoyaltyCoupon>; listTickets: () => Promise<SupportTicket[]>; getTicket: (id: string) => Promise<SupportTicket>; createTicket: (draft: TicketDraft, requestKey: string) => Promise<SupportTicket>; updateTicket: (id: string, values: { text?: string; requestKey?: string; status?: 'open' | 'closed' }) => Promise<SupportTicket>; listOrders: () => Promise<Order[]>; placeOrder: (items: { id: string; quantity: number }[], coupon: string | null, requestKey: string, delivery: ShippingChoice, checkout?: CheckoutDetails) => Promise<Order>; user: Pilot | null; loading: boolean; startupError: string; retry: () => Promise<void>; authenticate: (mode: 'login' | 'register', values: Credentials) => Promise<void>; update: (values: Partial<Omit<Pilot, 'id'>>) => Promise<void>; logout: () => Promise<void> };
 const Context = createContext<Auth | null>(null);
 const key = 'speedzone.session';
+const developmentHost = __DEV__ && Platform.OS !== 'web' && Constants.expoConfig?.hostUri;
 const api = (Platform.OS === 'android' ? process.env.EXPO_PUBLIC_ANDROID_API_URL : undefined)
+  || (Platform.OS !== 'web' ? process.env.EXPO_PUBLIC_NATIVE_API_URL : undefined)
   || process.env.EXPO_PUBLIC_API_URL
+  || (developmentHost && `http://${new URL('http://' + developmentHost).hostname}:3001`)
   || (Platform.OS === 'web' && typeof window !== 'undefined' ? `http://${window.location.hostname}:3001` : 'http://127.0.0.1:3001');
 export function AuthProvider({ children }: PropsWithChildren) {
   const [user, setUser] = useState<Pilot | null>(null);

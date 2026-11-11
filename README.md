@@ -16,6 +16,14 @@ As referências visuais não representam serviços já contratados. Permanecem p
 
 Validação desta implementação: lint, TypeScript, seis testes da API e exportação web. A revisão visual no navegador e os testes em dispositivos Android/iOS ainda precisam ser realizados.
 
+## Aparência e temas
+
+A interface usa a paleta SpeedZone nos modos **Claro**, **Escuro** e **Sistema**. A escolha fica salva neste aparelho e pode ser alterada no login ou em **Conta → Do seu jeito**. O botão de sol/lua do cabeçalho alterna diretamente entre claro e escuro. A opção Sistema acompanha a aparência do dispositivo.
+
+Os tokens de cor ficam em `src/theme/tokens.ts`; `ThemeContext` distribui o tema e memoriza os estilos sem remontar as telas. Os cards da garagem e do catálogo seguem as referências visuais, usando os dados existentes de pontos, veículos, produtos e estoque. Nenhum saldo financeiro, benefício VIP ou rastreamento ao vivo foi acrescentado como dado fictício.
+
+Foi adicionado `expo-system-ui` compatível com o SDK 57 para a configuração automática de aparência. Development builds existentes precisam ser reconstruídas para incluir esse módulo e a configuração nativa; apenas recarregar o JavaScript não atualiza o binário.
+
 ## Usar no computador
 
 Na pasta do projeto, abra dois terminais:

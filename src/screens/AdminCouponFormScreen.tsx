@@ -1,3 +1,4 @@
+import { useTheme, useThemedStyles } from '../theme/ThemeContext';
 import { Disclosure } from '../components/Disclosure';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, Switch, Text, TextInput, View } from 'react-native';
@@ -7,19 +8,25 @@ import { useAuth } from '../context/AuthContext';
 import { useCatalog } from '../context/CatalogContext';
 import { Promotion, PromotionDraft } from '../data/coupons';
 import { categories, money, products } from '../data/products';
-import { ProductAction, ps as s } from '../components/AdminProductUI';
+import { ProductAction, createPs } from '../components/AdminProductUI';
 import { PilotAvatar } from '../components/PilotAvatar';
 import { StoreIcon } from '../components/StoreHeader';
-import { colors as c } from '../theme/tokens';
+
 import * as Clipboard from 'expo-clipboard';
 import { ConfirmAction } from '../components/AdminDetailUI';
 
 const blank:PromotionDraft={code:'',label:'',kind:'percent',value:20,minimum:0,maximum:0,categories:[],limit:150,expires:'',paused:false,archived:false,ownerEmail:'',revision:0};
 const numeric=(value:string)=>/^\d+(?:[.,]\d{1,2})?$/.test(value.trim())?Number(value.replace(',','.')):NaN;
 function Field({label,value,onChange,numeric:decimal=false,disabled=false,placeholder}: {label:string;value:string;onChange:(v:string)=>void;numeric?:boolean;disabled?:boolean;placeholder?:string}){
+  const { colors: c } = useTheme();
+  const s = useThemedStyles(createPs);
+
  return <View><Text style={s.label}>{label}</Text><TextInput accessibilityLabel={label} value={value} onChangeText={onChange} editable={!disabled} placeholder={placeholder} placeholderTextColor={c.subtle} keyboardType={decimal?'decimal-pad':'default'} autoCapitalize="none" style={s.input}/></View>;
 }
 export default function AdminCouponFormScreen(){
+  const { colors: c } = useTheme();
+  const s = useThemedStyles(createPs);
+
  const {code,duplicate}=useLocalSearchParams<{code?:string;duplicate?:string}>();
  const {listAdminCoupons,saveCoupon}=useAuth();const {products:catalog}=useCatalog();
  const [draft,setDraft]=useState<PromotionDraft>(blank),[known,setKnown]=useState<Promotion[]>([]),[loading,setLoading]=useState(true),[loaded,setLoaded]=useState(false),[error,setError]=useState(''),[busy,setBusy]=useState(false),[retry,setRetry]=useState(0);

@@ -1,12 +1,15 @@
+import { useThemedStyles } from '../theme/ThemeContext';
 import { useEffect, useRef, useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, View } from 'react-native';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../context/AuthContext';
 import { DeliveryAddress, addressError } from '../utils/address';
-import { CheckoutButton, CheckoutHeader, checkoutStyles as s } from '../components/CheckoutUI';
+import { CheckoutButton, CheckoutHeader, createCheckoutStyles } from '../components/CheckoutUI';
 const fields: [keyof DeliveryAddress, string, number][] = [['recipient', 'Destinatário', 140], ['phone', 'Telefone com DDD (opcional)', 20], ['street', 'Rua / Avenida', 120], ['number', 'Número (ou S/N)', 20], ['complement', 'Complemento (opcional)', 80], ['district', 'Bairro', 80], ['city', 'Cidade', 80], ['state', 'UF', 2], ['reference', 'Referência (opcional)', 150]];
 export default function AddressScreen() {
+  const s = useThemedStyles(createCheckoutStyles);
+
   const { user, update } = useAuth();
   const [draft, setDraft] = useState<DeliveryAddress>(user?.deliveryAddress || { recipient: `${user?.name || ''} ${user?.surname || ''}`.trim(), phone: user?.phone || '', cep: '', street: '', number: '', complement: '', district: '', city: '', state: '', reference: '' });
   const [querying, setQuerying] = useState(false), [busy, setBusy] = useState(false), [error, setError] = useState(''), [notice, setNotice] = useState('');

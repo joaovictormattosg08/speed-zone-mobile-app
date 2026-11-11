@@ -1,12 +1,17 @@
+import { ThemeColors , fonts } from '../theme/tokens';
+import { useTheme, useThemedStyles } from '../theme/ThemeContext';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { ComponentProps, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, TextInputProps, View } from 'react-native';
-import { colors, fonts } from '../theme/tokens';
+
 
 type IconName = ComponentProps<typeof MaterialCommunityIcons>['name'];
 type Props = TextInputProps & { label: string; icon: IconName; hint?: string; password?: boolean };
 
 export function AuthField({ label, icon, hint, password, ...props }: Props) {
+  const { colors } = useTheme();
+  const styles = useThemedStyles(createStyles);
+
   const [focused, setFocused] = useState(false);
   const [visible, setVisible] = useState(false);
   return <View style={styles.group}>
@@ -18,12 +23,12 @@ export function AuthField({ label, icon, hint, password, ...props }: Props) {
     </View>
   </View>;
 }
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   group: { gap: 7 }, labelRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' },
   label: { fontFamily: fonts.medium, fontSize: 12, color: colors.muted, letterSpacing: 0.3 },
   hint: { fontFamily: fonts.medium, fontSize: 10, color: colors.muted, letterSpacing: 0.4 },
-  inputWrap: { minHeight: 50, backgroundColor: colors.input, borderRadius: 5, borderWidth: 1, borderColor: 'transparent', paddingLeft: 14, flexDirection: 'row', alignItems: 'center', gap: 11 },
-  focused: { borderColor: colors.primary }, input: { flex: 1, minWidth: 0, minHeight: 48, paddingVertical: 12, paddingRight: 10, color: colors.text, fontFamily: fonts.regular, fontSize: 14 },
+  inputWrap: { minHeight: 54, backgroundColor: colors.input, borderRadius: 16, borderWidth: 1, borderColor: 'transparent', paddingLeft: 14, flexDirection: 'row', alignItems: 'center', gap: 11 },
+  focused: { borderColor: colors.primary }, input: { flex: 1, minWidth: 0, minHeight: 52, paddingVertical: 12, paddingRight: 10, color: colors.text, fontFamily: fonts.regular, fontSize: 15 },
   eye: { minHeight: 48, width: 44, alignItems: 'center', justifyContent: 'center' },
 });
 

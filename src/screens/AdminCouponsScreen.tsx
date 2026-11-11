@@ -1,4 +1,5 @@
-import { palette as speedPalette, colors as c } from '../theme/tokens';
+import { useTheme, useThemedStyles } from '../theme/ThemeContext';
+import { palette as speedPalette } from '../theme/tokens';
 import { useCallback, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Switch, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -7,7 +8,7 @@ import * as Clipboard from 'expo-clipboard';
 import { useAuth } from '../context/AuthContext';
 import { Promotion, PromotionDraft } from '../data/coupons';
 import { money } from '../data/products';
-import { ProductAction, ps as s } from '../components/AdminProductUI';
+import { ProductAction, createPs } from '../components/AdminProductUI';
 import { StoreIcon } from '../components/StoreHeader';
 import { PilotAvatar } from '../components/PilotAvatar';
 const labels={active:'Ativo',paused:'Pausado',expired:'Expirado',exhausted:'Esgotado',archived:'Arquivado'};
@@ -15,6 +16,9 @@ const blank:PromotionDraft={code:'',label:'',kind:'percent',value:10,minimum:0,l
 const benefit=(p:PromotionDraft)=>p.kind==='fixed'?`${money(p.value/100)} OFF`:p.kind==='shipping'?`${p.value}% OFF no Frete`:`${p.value}% OFF`;
 const numeric=(v:string)=>/^\d+(?:[.,]\d{1,2})?$/.test(v.trim())?Number(v.replace(',','.')):NaN;
 export default function AdminCouponsScreen(){
+  const { colors: c } = useTheme();
+  const s = useThemedStyles(createPs);
+
  const {listAdminCoupons,saveCoupon}=useAuth();
  const [coupons,setCoupons]=useState<Promotion[]>([]),[loading,setLoading]=useState(true),[error,setError]=useState(''),[notice,setNotice]=useState(''),[revision,setRevision]=useState(0);
  const [query,setQuery]=useState(''),[filter,setFilter]=useState('all'),[sort,setSort]=useState(false);

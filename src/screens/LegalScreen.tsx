@@ -1,12 +1,16 @@
+import { ThemeColors , fonts as f } from '../theme/tokens';
+import { useThemedStyles } from '../theme/ThemeContext';
 import { router } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StoreIcon } from '../components/StoreHeader';
 import { useAuth } from '../context/AuthContext';
 import { LegalDocument, legalDocuments, legalUpdatedAt } from '../data/legal';
-import { colors as c, fonts as f } from '../theme/tokens';
+
 
 export default function LegalScreen({ document }: { document: LegalDocument }) {
+  const s = useThemedStyles(createS);
+
   const { user } = useAuth();
   const content = legalDocuments[document];
   function goBack() {
@@ -31,7 +35,7 @@ export default function LegalScreen({ document }: { document: LegalDocument }) {
   </SafeAreaView>;
 }
 
-const s = StyleSheet.create({
+const createS = (c: ThemeColors) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: c.background },
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, gap: 12, minHeight: 60 },
   back: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
@@ -40,8 +44,8 @@ const s = StyleSheet.create({
   title: { color: c.text, fontFamily: f.bold, fontSize: 28 },
   body: { color: c.muted, fontFamily: f.regular, fontSize: 14, lineHeight: 23 },
   date: { color: c.subtle, fontFamily: f.regular, fontSize: 12, marginBottom: 8 },
-  card: { backgroundColor: c.panel, borderWidth: 1, borderColor: c.surfaceBorder, borderRadius: 10, padding: 16, gap: 10 },
+  card: { backgroundColor: c.panel, borderWidth: 1, borderColor: c.surfaceBorder, borderRadius: 24, padding: 16, gap: 10 },
   heading: { color: c.text, fontFamily: f.bold, fontSize: 16 },
-  support: { minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
+  support: {borderRadius: 24,  minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
   link: { color: c.primary, fontFamily: f.medium, fontSize: 14 },
 });

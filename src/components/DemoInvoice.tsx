@@ -1,13 +1,18 @@
+import { ThemeColors , palette } from '../theme/tokens';
+import { useTheme, useThemedStyles } from '../theme/ThemeContext';
 import { Modal, Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState } from 'react';
 import type { Order } from '../data/orders';
 import { statusLabels } from '../data/orderStatus';
-import { colors, palette } from '../theme/tokens';
+
 
 const currency = (cents: number) => (cents / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
 export function DemoInvoice({ order, onClose }: { order: Order; onClose: () => void }) {
+  const { colors } = useTheme();
+  const s = useThemedStyles(createS);
+
   const [error, setError] = useState('');
   const reference = `DEMO-${order.id}`;
   const date = new Date(order.createdAt).toLocaleDateString('pt-BR');
@@ -60,7 +65,7 @@ export function DemoInvoice({ order, onClose }: { order: Order; onClose: () => v
   </Modal>;
 }
 
-const s = StyleSheet.create({
+const createS = (colors: ThemeColors) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   toolbar: { padding: 16, gap: 12, flexDirection: 'row', alignItems: 'center' },
   heading: { flex: 1, color: colors.text, fontSize: 18, fontWeight: '600' },
@@ -74,7 +79,7 @@ const s = StyleSheet.create({
   noticeText: { color: palette.pureWhite, fontSize: 13, fontWeight: '700' },
   text: { color: palette.carbonBlack, fontSize: 14, lineHeight: 21, flexShrink: 1 },
   section: { color: palette.deepGreen, fontSize: 13, fontWeight: '700', marginTop: 14 },
-  item: { borderBottomWidth: 1, borderBottomColor: palette.lightGray, paddingVertical: 12, gap: 4 },
+  item: {borderRadius: 24,  borderBottomWidth: 1, borderBottomColor: palette.lightGray, paddingVertical: 12, gap: 4 },
   itemName: { color: palette.carbonBlack, fontSize: 15, fontWeight: '700', flexShrink: 1 },
   row: { flexDirection: 'row', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 },
   warning: { color: '#93000a', fontSize: 14, fontWeight: '700' },

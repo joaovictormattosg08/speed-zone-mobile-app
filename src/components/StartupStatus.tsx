@@ -1,7 +1,10 @@
+import { useTheme } from '../theme/ThemeContext';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
-import { colors } from '../theme/tokens';
+
 
 export function StartupStatus({ title, message, onRetry }: { title: string; message?: string; onRetry?: () => void }) {
+  const { colors } = useTheme();
+
   return <View style={{ flex: 1, backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center', padding: 24, gap: 20 }}>
     {!onRetry && <ActivityIndicator color={colors.primary} accessibilityLabel={title} />}
     <Text accessibilityRole="header" style={{ color: colors.text, fontSize: 22, fontWeight: '600', textAlign: 'center' }}>{title}</Text>

@@ -1,10 +1,11 @@
+import { useTheme , useThemedStyles } from '../theme/ThemeContext';
 import { palette as speedPalette } from '../theme/tokens';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Image, ScrollView, Text, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import * as Clipboard from 'expo-clipboard';
 import { AdminDetail, ConfirmAction, DetailSection } from '../components/AdminDetailUI';
-import { ProductAction, ps as s } from '../components/AdminProductUI';
+import { ProductAction, createPs } from '../components/AdminProductUI';
 import { OrderTotals } from '../components/CheckoutUI';
 import { useAuth } from '../context/AuthContext';
 import { AdminOrder } from '../data/admin';
@@ -14,6 +15,10 @@ import { money, products } from '../data/products';
 const stages: OrderStatus[] = ['pending', 'confirmed', 'processing', 'transit', 'delivered'];
 const next: Record<OrderStatus, OrderStatus[]> = { pending: ['confirmed', 'cancelled'], confirmed: ['processing', 'cancelled'], processing: ['transit', 'cancelled'], transit: ['delivered', 'cancelled'], delivered: [], cancelled: [] };
 export default function AdminOrderDetailScreen() {
+  const { colors: c } = useTheme();
+
+  const s = useThemedStyles(createPs);
+
   const { id } = useLocalSearchParams<{ id: string }>();
   const { listAdminOrders, changeOrderStatus, listUsers } = useAuth();
   const [order, setOrder] = useState<AdminOrder | null>(null);
@@ -33,7 +38,7 @@ export default function AdminOrderDetailScreen() {
   }
   return <AdminDetail title="Detalhes do Pedido" back="/admin-orders" busy={busy}>
     <Text style={s.eyebrow}>VOLTAR P/ PEDIDOS / EXPEDIÇÃO</Text>
-    {loading && <ActivityIndicator color={speedPalette.speedGreen} />}
+    {loading && <ActivityIndicator color={c.primary} />}
     {!!error && <View style={s.card}><Text accessibilityRole="alert" style={s.error}>{error}</Text><ProductAction label="Recarregar pedido" disabled={busy} onPress={() => { setTarget(null); setLoading(true); setRetry(v => v + 1); }} /></View>}
     {!!notice && <Text accessibilityLiveRegion="polite" style={s.green}>{notice}</Text>}
     {order && !loading && <>

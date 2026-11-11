@@ -1,15 +1,18 @@
+import { useTheme } from '../theme/ThemeContext';
 import { useCatalog } from './CatalogContext';
 import { createContext, PropsWithChildren, useContext, useEffect, useState } from 'react';
 import { useAuth } from './AuthContext';
 import { loadStore, saveStore } from '../utils/storePersistence';
 import { StartupStatus } from '../components/StartupStatus';
 import { Pressable, Text, View } from 'react-native';
-import { colors } from '../theme/tokens';
+
 
 export const DEMO_STOCK = 5;
 type Store = { cart: Record<string, number>; add: (id: string, quantity?: number) => void; remove: (id: string) => void; removeItem: (id: string) => void; count: number; vehicle: string; setVehicle: (value: string) => void; favorites: string[]; toggleFavorite: (id: string) => void };
 const StoreContext = createContext<Store | null>(null);
 export function StoreProvider({ children }: PropsWithChildren) {
+  const { colors } = useTheme();
+
   const { products } = useCatalog();
   const { user } = useAuth();
   const [cart, setCart] = useState<Record<string, number>>({});
