@@ -21,7 +21,6 @@ export default function PilotScreen() {
   const [busy, setBusy] = useState(false);
   const [feedback, setFeedback] = useState('');
   const [error, setError] = useState('');
-  const [info, setInfo] = useState<{ title: string; text: string } | null>(null);
   if (!user) return null;
   function openEditor(type: Editor) {
     if (!user) return;
@@ -63,12 +62,13 @@ export default function PilotScreen() {
       setEditor(null);
     }, 'Dados salvos na sua conta.');
   }
-  const showInfo = (title: string, text: string) => setInfo({ title, text });
   const menu = [
     { icon: 'truck-outline' as const, title: 'Meus Pedidos & Entregas', description: 'Acompanhe seus pedidos', onPress: () => router.navigate('/(main)/orders'), color: c.primary },
     { icon: 'map-marker-outline' as const, title: 'Endereço de Entrega', description: user.address || 'Cadastre seu endereço principal', onPress: () => router.push('/address'), color: speedPalette.speedGreen },
     { icon: 'headset' as const, title: 'Central de Suporte', description: 'Chamados, garantia e dúvidas técnicas', onPress: () => router.push('/support'), color: c.primary },
-    { icon: 'shield-half-full' as const, title: 'Privacidade & Termos de Uso', description: 'Como seus dados são armazenados', onPress: () => showInfo('Privacidade nesta versão local', 'Sua conta, foto e garagem ficam no banco de dados deste computador. A senha é armazenada como hash. Use Sair da Conta para encerrar a sessão. Esta versão não possui serviço de e-mail, pagamento ou sincronização em nuvem. Os termos definitivos serão disponibilizados antes da publicação.'), color: c.muted },
+    { icon: 'file-document-outline' as const, title: 'Termos de Uso', description: 'Regras de uso do aplicativo', onPress: () => router.push('/terms'), color: c.muted },
+    { icon: 'shield-half-full' as const, title: 'Política de Privacidade', description: 'Seus dados e suas solicitações', onPress: () => router.push('/privacy'), color: c.muted },
+    { icon: 'information-outline' as const, title: 'Sobre a SpeedZone', description: 'Conheça o app e esta versão', onPress: () => router.push('/about'), color: c.muted },
   ];
   const fields = editor === 'profile' ? [['name', 'Nome'], ['surname', 'Sobrenome'], ['email', 'E-mail'], ['phone', 'Telefone (opcional)']] : editor === 'address' ? [['address', 'Endereço completo']] : [['model', 'Modelo do carro *'], ['engine', 'Motorização'], ['year', 'Ano'], ['color', 'Cor'], ['power', 'Potência (CV)'], ['tune', 'Calibração'], ['exhaust', 'Escape'], ['ignition', 'Ignição']];
   return <SafeAreaView edges={['top']} style={s.safe}>
@@ -97,7 +97,6 @@ export default function PilotScreen() {
       <View style={s.footer}><Text style={s.operations}>SPEEDZONE MOTORSPORT OPERATIONS</Text><Text style={s.subtle}>SpeedZone • Conta local no seu computador</Text></View>
     </ScrollView>
     <Modal visible={editor !== null} transparent animationType="fade" onRequestClose={() => !busy && setEditor(null)}><KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={s.overlay}><View style={s.dialog}><View style={s.sectionHeading}><Text style={s.dialogTitle}>{editor === 'profile' ? 'Dados do Piloto' : editor === 'car' ? 'Novo projeto' : 'Endereço de Entrega'}</Text><Pressable accessibilityRole="button" accessibilityLabel="Fechar edição" disabled={busy} onPress={() => setEditor(null)} style={s.close}><StoreIcon name="close" color={c.muted} /></Pressable></View><ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ gap: 14, paddingBottom: 12 }}>{fields.map(([key, label]) => <View key={key} style={{ gap: 7 }}><Text style={s.fieldLabel}>{label}</Text><TextInput accessibilityLabel={label} value={draft[key] || ''} editable={!busy} onChangeText={value => setDraft(previous => ({ ...previous, [key]: value }))} style={s.input} autoCapitalize={key === 'email' ? 'none' : 'sentences'} keyboardType={key === 'email' ? 'email-address' : key === 'phone' ? 'phone-pad' : ['year', 'power'].includes(key) ? 'numeric' : 'default'} maxLength={key === 'address' ? 300 : 100} multiline={key === 'address'} /></View>)}{error !== '' && <Text accessibilityLiveRegion="polite" style={{ color: c.error }}>{error}</Text>}</ScrollView><Pressable accessibilityRole="button" disabled={busy} onPress={save} style={s.save}><Text style={[s.buttonText, { color: c.onPrimary }]}>{busy ? 'Salvando...' : 'Salvar alterações'}</Text></Pressable></View></KeyboardAvoidingView></Modal>
-    <Modal visible={info !== null} transparent animationType="fade" onRequestClose={() => setInfo(null)}><View style={s.overlay}><View style={s.dialog}><Text style={s.dialogTitle}>{info?.title}</Text><Text style={[s.secondary, { lineHeight: 23, marginVertical: 20 }]}>{info?.text}</Text><Pressable accessibilityRole="button" onPress={() => setInfo(null)} style={s.button}><Text style={s.buttonText}>Entendi</Text></Pressable></View></View></Modal>
   </SafeAreaView>;
 }
 

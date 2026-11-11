@@ -1,3 +1,4 @@
+import { Link } from 'expo-router';
 import { palette as speedPalette, colors, fonts } from '../theme/tokens';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useAuth } from '../context/AuthContext';
@@ -71,6 +72,14 @@ export default function AuthScreen() {
             {recovery && <Pressable accessibilityRole="button" onPress={() => changeMode('login')} style={s.back}><Text style={s.link}>Voltar para entrar</Text></Pressable>}
           </View>
 
+          <View style={s.legalLinks}>
+            <Text style={s.footerText}>Conheça as regras de uso e como seus dados são tratados.</Text>
+            <View style={s.trustRow}>
+              <Link href="/terms" style={s.legalLink}>Termos de Uso</Link>
+              <Link href="/privacy" style={s.legalLink}>Política de Privacidade</Link>
+              <Link href="/about" style={s.legalLink}>Sobre o app</Link>
+            </View>
+          </View>
           <View style={s.footer}><View style={s.trustRow}><View style={s.trustItem}><Icon name="check-decagram-outline" size={18} /><Text style={s.trustText}>ACESSO PROTEGIDO</Text></View><View style={s.separator} /><View style={s.trustItem}><Icon name="shield-half-full" size={18} /><Text style={s.trustText}>PRIVACIDADE</Text></View></View><Text style={s.footerText}>Sua paixão por performance merece uma garagem à altura. Bem-vindo à SpeedZone Motorsport.</Text></View>
         </View>
       </ScrollView>
@@ -79,6 +88,7 @@ export default function AuthScreen() {
 }
 
 const s = StyleSheet.create({
+  legalLinks: { alignItems: 'center', marginTop: 24, gap: 8 }, legalLink: { color: colors.primary, fontFamily: fonts.medium, fontSize: 12, paddingVertical: 14, paddingHorizontal: 4, minHeight: 44 },
   safe: { flex: 1, backgroundColor: colors.background }, flex: { flex: 1 },
   scroll: { flexGrow: 1, paddingHorizontal: 16, paddingTop: 8, paddingBottom: 40 }, content: { width: '100%', maxWidth: 460, alignSelf: 'center' },
   header: { alignItems: 'center', paddingBottom: 25 }, telemetry: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 13, paddingVertical: 6, backgroundColor: colors.elevated, borderRadius: 30, marginBottom: 15 },
