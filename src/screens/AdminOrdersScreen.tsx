@@ -1,3 +1,4 @@
+import { AdminThemeToggle } from '../components/AdminThemeToggle';
 import { AdminNavigation } from '../components/AdminNavigation';
 import { ThemeColors, fonts as f } from '../theme/tokens';
 import { useTheme, useThemedStyles } from '../theme/ThemeContext';
@@ -43,7 +44,7 @@ export default function AdminOrdersScreen() {
  const todayRevenue = todayOrders.reduce((sum,order)=>sum+order.total,0);
  const yesterday = businessDate.format(new Date(Date.parse(today.split('/').reverse().join('-')+'T12:00:00Z')-86400000));
  const previous = orders.filter(o=>o.status!=='cancelled' && businessDate.format(new Date(o.createdAt))===yesterday).reduce((sum,o)=>sum+o.total,0);
- return <SafeAreaView style={s.safe}><View style={s.header}>
+ return <SafeAreaView style={s.safe}><AdminThemeToggle/><View style={s.header}>
    <Pressable accessibilityRole="button" accessibilityLabel="Voltar ao Dashboard" onPress={()=>router.replace('/admin')} style={s.round}><StoreIcon name="arrow-left" color={c.text}/></Pressable>
    <View style={s.flex}><Text style={s.title}>Vendas e Pedidos</Text><Text style={s.small}>Painel de Operações SpeedZone</Text></View>
    <Pressable accessibilityRole="button" accessibilityLabel="Ver pedidos aguardando envio" onPress={()=>{setFilter('shipping');setQuery('');}} style={s.round}><StoreIcon name="bell-outline" color={c.text}/></Pressable><PilotAvatar size={38}/>

@@ -1,4 +1,4 @@
-import { setupCoupons, listCoupons, saveCoupon, customerCoupons } from './coupons.mjs';
+import { couponMetrics, setupCoupons, listCoupons, saveCoupon, customerCoupons } from './coupons.mjs';
 import { setupUsers, listUsers, createUser, updateUser, userLogs, canSupport, restricted } from './users.mjs';
 import { listProducts, saveProduct, setupProducts } from './products.mjs';
 import { listAdminOrders, changeOrderStatus } from './admin-orders.mjs';
@@ -79,7 +79,17 @@ export function createApi({ database = resolve('server/data/speedzone.sqlite') }
           const salt = randomBytes(16).toString('hex');
           const hash = (await derive(body.password, salt, 64)).toString('hex');
           const id = randomUUID(); const profile = JSON.stringify({ name, surname, phone: '', photo: null, cars: [], activeCarId: null, address: '' });
-          try { db.prepare('INSERT INTO users VALUES (?, ?, ?, ?)').run(id, email, `${salt}:${hash}`, profile); } catch (error) { if (String(error).includes('UNIQUE')) fail('Este e-mail já está cadastrado.', 409); throw error; }
+          db.exec('BEGIN IMMEDIATE');
+          try {
+            const firstUser = !db.prepare('SELECT 1 FROM users LIMIT 1').get();
+            db.prepare('INSERT INTO users VALUES (?, ?, ?, ?)').run(id, email, `${salt}:${hash}`, profile);
+            if (firstUser) db.prepare('INSERT INTO administrators VALUES (?, ?)').run(id, new Date().toISOString());
+            db.exec('COMMIT');
+          } catch (error) {
+            db.exec('ROLLBACK');
+            if (String(error).includes('UNIQUE')) fail('Este e-mail já está cadastrado.', 409);
+            throw error;
+          }
           row = db.prepare('SELECT * FROM users WHERE id = ?').get(id);
         } else {
           const [salt, hash] = (row?.password || `${'0'.repeat(32)}:${'0'.repeat(128)}`).split(':');
@@ -101,7 +111,7 @@ export function createApi({ database = resolve('server/data/speedzone.sqlite') }
       if (path?.startsWith('/admin')) {
         const supportRoute = path === '/admin/support' || path.startsWith('/admin/support/');
         if (!(supportRoute ? canSupport(db,row.id) : isAdmin(db,row.id))) fail('Acesso restrito à equipe autorizada.', 403);
-        if (path === '/admin/coupons' && req.method === 'GET') return send({ coupons:listCoupons(db) });
+        if (path === '/admin/coupons' && req.method === 'GET') return send({ coupons:listCoupons(db), metrics:couponMetrics(db) });
         if (path === '/admin/coupons' && req.method === 'POST') return send({ coupon:saveCoupon(db,body) },201);
         const promoCode=path.match(/^\/admin\/coupons\/([A-Z0-9-]+)$/)?.[1];
         if (promoCode && req.method === 'PATCH') return send({ coupon:saveCoupon(db,body,promoCode) });

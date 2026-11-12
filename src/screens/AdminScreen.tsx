@@ -1,3 +1,4 @@
+import { AdminThemeToggle } from '../components/AdminThemeToggle';
 import { AdminNavigation } from '../components/AdminNavigation';
 import { ThemeColors , palette as speedPalette, fonts as f } from '../theme/tokens';
 import { useTheme, useThemedStyles } from '../theme/ThemeContext';
@@ -35,7 +36,7 @@ export default function AdminScreen() {
    {label:'Pilotos',value:data.customers,note:'Contas cadastradas',icon:'account-group-outline',color:c.primary,path:'/admin-users'}
  ] as const : [];
  const alerts = metrics.slice(0,3).filter(metric => typeof metric.value === 'number' && metric.value > 0);
- return <SafeAreaView edges={['top','left','right','bottom']} style={s.safe}><View style={s.header}><View style={s.brandIcon}><StoreIcon name="speedometer" color={c.primary} size={25}/></View><View style={s.grow}><Text style={s.eyebrow}>OPERAÇÕES</Text><Text style={s.title}>SpeedZone Admin</Text></View><Pressable accessibilityRole="button" accessibilityLabel="Ver alertas operacionais" onPress={()=>scroll.current?.scrollTo({y:alertsY.current,animated:true})} style={s.iconButton}><StoreIcon name="bell-outline" color={c.muted} /></Pressable><Pressable accessibilityRole="button" accessibilityLabel="Voltar para Minha Conta" onPress={()=>router.replace('/(main)/account')}><PilotAvatar size={32}/></Pressable></View>
+ return <SafeAreaView edges={['top','left','right','bottom']} style={s.safe}><AdminThemeToggle/><View style={s.header}><View style={s.brandIcon}><StoreIcon name="speedometer" color={c.primary} size={25}/></View><View style={s.grow}><Text style={s.eyebrow}>OPERAÇÕES</Text><Text style={s.title}>SpeedZone Admin</Text></View><Pressable accessibilityRole="button" accessibilityLabel="Ver alertas operacionais" onPress={()=>scroll.current?.scrollTo({y:alertsY.current,animated:true})} style={s.iconButton}><StoreIcon name="bell-outline" color={c.muted} /></Pressable><Pressable accessibilityRole="button" accessibilityLabel="Voltar para Minha Conta" onPress={()=>router.replace('/(main)/account')}><PilotAvatar size={32}/></Pressable></View>
  <ScrollView ref={scroll} refreshControl={<RefreshControl refreshing={loading} onRefresh={()=>setRevision(v=>v+1)} tintColor={c.primary}/>} contentContainerStyle={s.content}>
  {data && <View style={s.panel}>
    <View style={s.between}><Text style={s.title}>Faturamento do dia</Text><Text style={s.status}>{change === null ? 'Sem base ontem' : change.toLocaleString('pt-BR',{style:'percent', maximumFractionDigits:1,signDisplay:'exceptZero'}) + ' vs. ontem'}</Text></View>
@@ -44,7 +45,7 @@ export default function AdminScreen() {
  </View>}
  <View style={s.grid}>{([
    ['Novo produto','plus-box-outline','/admin-product'],['Ver vendas','receipt-text-outline','/admin-orders'],
-   ['Novo cupom','ticket-percent-outline','/admin-coupon'],['Fila do Box','headset','/admin-support'],
+   ['Gestão de cupons','ticket-percent-outline','/admin-coupons'],['Fila do Box','headset','/admin-support'],
    ['Inventário','archive-outline','/admin-products'],['Pilotos','account-group-outline','/admin-users']
  ] as const).map(([label,icon,path])=><Pressable key={path} accessibilityRole="button" onPress={()=>router.push(path)} style={[s.action,{flexGrow:1,flexBasis:'29%',flexDirection:'column',paddingHorizontal:4,paddingVertical:10}]}><StoreIcon name={icon} color={c.primary} size={20}/><Text style={s.actionText}>{label}</Text></Pressable>)}</View>
  {!!error && <View style={s.panel}><Text style={s.error}>{error}</Text><Pressable accessibilityRole="button" onPress={()=>setRevision(v=>v+1)} style={s.action}><Text style={s.actionText}>Tentar novamente</Text></Pressable></View>}{loading && !data && <ActivityIndicator color={c.primary}/>}

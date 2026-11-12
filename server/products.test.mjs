@@ -1,6 +1,5 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { DatabaseSync } from 'node:sqlite';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -21,9 +20,6 @@ test('inventory permissions, persistence, publication, stock and checkout', asyn
     const user = await call('/auth/register','POST',{name:'Admin',surname:'Teste',email:'inventory@example.com',password:'TestPassword123!'});
     const token = user.token;
     assert.equal((await call('/admin/products')).status,401);
-    assert.equal((await call('/admin/products','POST',{},token)).status,403);
-    const db = new DatabaseSync(database);
-    db.prepare('INSERT INTO administrators VALUES (?, ?)').run(user.user.id,new Date().toISOString()); db.close();
     const images = ['data:image/png;base64,' + (await readFile(new URL('../assets/icon.png',import.meta.url))).toString('base64')];
     const draft = {id:'SZ-NEW-001',name:'Peça de teste',price:123.45,cost:50,stock:2,minimum:1,category:'Turbo',subcategory:'Turbinas',stage:'STAGE 3',power:'350 CV',diameter:'54mm',material:'Billet',description:'Descrição de teste',images,platforms:['EA888'],published:false};
     const created = await call('/admin/products','POST',draft,token);

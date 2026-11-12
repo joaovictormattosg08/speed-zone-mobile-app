@@ -12,7 +12,7 @@ export function setupProducts(db) {
   for (const [id, name, price, category] of seeds) db.prepare('INSERT OR IGNORE INTO products VALUES (?, ?)').run(id, JSON.stringify({ id, name, price, category, stock: 5, minimum: 3, cost: 0, published: true, images: [], stage: 'STAGE 2+', subcategory: '', platforms: [], power: '', diameter: '', material: '', description: '', revision: 1 }));
 }
 export function listProducts(db, admin = false) {
-  return db.prepare('SELECT payload FROM products ORDER BY id').all().map(row => JSON.parse(row.payload)).filter(p => !p.archived && (admin || p.published)).map(p => { if (admin) return p; const { cost, ...publicProduct } = p; return publicProduct; });
+  return db.prepare('SELECT payload FROM products ORDER BY id').all().map(row => JSON.parse(row.payload)).filter(p => !p.archived && (admin || p.published)).map(p => { if (admin) return p; const { cost, fixedCost, ...publicProduct } = p; return publicProduct; });
 }
 export function saveProduct(db, body, id) {
   const previous = id && db.prepare('SELECT payload FROM products WHERE id = ?').get(id);
@@ -40,6 +40,11 @@ export function saveProduct(db, body, id) {
   if (!Array.isArray(body.platforms) || body.platforms.length > 20 || body.platforms.some(p => typeof p !== 'string' || p.length > 100)) fail('Aplicações inválidas.');
   if (!Array.isArray(body.images) || body.images.length > 5 || body.images.some(image => typeof image !== 'string' || !/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/]+=*$/.test(image)) || body.images.join('').length > 6500000) fail('Envie até 5 imagens JPG, PNG ou WebP, total de até 4,8 MB.');
   if (!old && !body.images.length) fail('Adicione uma foto principal.');
+  product.fixedCost = body.fixedCost ?? old?.fixedCost ?? 0;
+  if (!Number.isFinite(product.fixedCost) || product.fixedCost < 0 || product.fixedCost > 10000000) fail('Custo fixo inválido.');
+  product.manufacturerCode = body.manufacturerCode ?? old?.manufacturerCode ?? '';
+  product.boxInstallation = body.boxInstallation ?? old?.boxInstallation ?? false;
+  if (typeof product.manufacturerCode !== 'string' || product.manufacturerCode.length > 200 || typeof product.boxInstallation !== 'boolean') fail('Confira o código do fabricante e a instalação no Box.');
   Object.assign(product, { platforms: body.platforms, images: body.images, published: body.published });
   try {
     if (old) db.prepare('UPDATE products SET payload = ? WHERE id = ?').run(JSON.stringify(product), id);

@@ -17,7 +17,7 @@ export function listUsers(db) {
     const profile=JSON.parse(row.profile);
     const orders=db.prepare('SELECT payload FROM orders WHERE user_id = ?').all(row.id).map(o=>JSON.parse(o.payload)).filter(o=>o.status==='delivered');
     const replies=db.prepare("SELECT COUNT(*) AS count FROM support_tickets WHERE EXISTS (SELECT 1 FROM json_each(json_extract(payload,'$.messages')) WHERE json_extract(value,'$.actorId')=?)").get(row.id).count;
-    return {id:row.id,email:row.email,name:profile.name,surname:profile.surname,phone:profile.phone||'',photo:profile.photo,vehicle:profile.cars?.find(c=>c.id===profile.activeCarId)?.model||'',address:profile.address||'',role:isAdmin(db,row.id)?'admin':row.role,blocked:!!row.blocked,archived:!!row.archived,reason:row.reason,revision:row.revision,createdAt:row.created_at,orders:orders.length,spent:orders.reduce((sum,o)=>sum+o.total,0),replies};
+    return {vip:profile.vip===true,id:row.id,email:row.email,name:profile.name,surname:profile.surname,phone:profile.phone||'',photo:profile.photo,vehicle:profile.cars?.find(c=>c.id===profile.activeCarId)?.model||'',address:profile.address||'',role:isAdmin(db,row.id)?'admin':row.role,blocked:!!row.blocked,archived:!!row.archived,reason:row.reason,revision:row.revision,createdAt:row.created_at,orders:orders.length,spent:orders.reduce((sum,o)=>sum+o.total,0),replies};
   });
 }
 function fields(body) {
@@ -42,7 +42,7 @@ export async function createUser(db,actor,body) {
   if(!isAdmin(db,actor)||restricted(db,actor))fail('Acesso administrativo revogado.',403);
   const id=randomUUID();db.exec('BEGIN IMMEDIATE');try {
     const {email,...profile}=values;
-    db.prepare('INSERT INTO users VALUES (?,?,?,?)').run(id,email,`${salt}:${hash}`,JSON.stringify({...profile,photo:null,cars:[],activeCarId:null,address:''}));
+    db.prepare('INSERT INTO users VALUES (?,?,?,?)').run(id,email,`${salt}:${hash}`,JSON.stringify({...profile,vip:body.role==='customer'&&body.vip===true,photo:null,cars:[],activeCarId:null,address:''}));
     role(db,id,body.role);audit(db,actor,id,'Conta criada • '+body.role);db.exec('COMMIT');
   }catch(e){db.exec('ROLLBACK');if(String(e).includes('UNIQUE'))fail('E-mail já cadastrado.',409);throw e;}
   return listUsers(db).find(u=>u.id===id);
@@ -60,7 +60,8 @@ export function updateUser(db,actor,id,body) {
       const active=db.prepare('SELECT COUNT(*) AS count FROM administrators a JOIN user_management m ON m.user_id=a.user_id WHERE m.blocked=0 AND m.archived=0').get().count;
       if(active<=1)fail('Mantenha pelo menos um administrador ativo.');
     }
-    const profile={...JSON.parse(row.profile),name:values.name,surname:values.surname,phone:values.phone};
+    const oldProfile=JSON.parse(row.profile);
+    const profile={...oldProfile,vip:body.role==='customer'&&(body.vip??oldProfile.vip)===true,name:values.name,surname:values.surname,phone:values.phone};
     db.prepare('UPDATE users SET email=?,profile=? WHERE id=?').run(values.email,JSON.stringify(profile),id);
     role(db,id,body.role);
     db.prepare('UPDATE user_management SET blocked=?,archived=?,reason=?,revision=revision+1 WHERE user_id=?').run(+body.blocked,+body.archived,body.reason.trim(),id);

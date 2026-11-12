@@ -1,6 +1,5 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { DatabaseSync } from 'node:sqlite';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -18,11 +17,14 @@ test('promotions: permissions, rules, exclusive accounts, quotas, retries and pe
   const admin=await register('promo@example.com'), other=await register('other@example.com');
   assert.equal((await call('/admin/coupons')).status,401);
   assert.equal((await call('/admin/coupons','POST',{},other.token)).status,403);
-  const db=new DatabaseSync(database);db.prepare('INSERT INTO administrators VALUES (?,?)').run(admin.user.id,new Date().toISOString());db.close();
   const draft={code:'TEST10',label:'Test campaign',kind:'percent',value:10,minimum:0,limit:1,expires:'',paused:false,archived:false,ownerEmail:'',revision:0};
   const create=body=>call('/admin/coupons','POST',{...draft,...body},admin.token);
   const created=await create({});assert.equal(created.status,201);
   assert.equal((await create({})).status,409);
+  const scheduled=await create({code:'FUTURE',starts:'2099-01-01'});
+  assert.equal(scheduled.coupon.state,'scheduled');
+  assert.equal((await create({code:'BADRANGE',starts:'2099-01-01',expires:'2098-12-31'})).status,400);
+  assert.ok((await call('/coupons','GET',undefined,other.token)).coupons.find(p=>p.code==='FUTURE').unavailableReason);
   assert.equal((await create({code:'SP-RESERVED'})).status,400);
   assert.equal((await create({code:'INVALID',expires:'2027-02-30'})).status,400);
   const paused=await call('/admin/coupons/TEST10','PATCH',{...created.coupon,paused:true},admin.token);
@@ -31,7 +33,13 @@ test('promotions: permissions, rules, exclusive accounts, quotas, retries and pe
   const purchase={items:[{id:'SZ-ACC-015',quantity:1}],delivery:{cep:'01310100',service:'standard'},coupon:'TEST10',requestKey:'promo-order-test-1'};
   assert.equal((await call('/orders','POST',purchase,admin.token)).status,400);
   await call('/admin/coupons/TEST10','PATCH',{...paused.coupon,paused:false},admin.token);
+  const first=await create({code:'FIRST',audience:'first',description:'Desconto na estreia'});
+  assert.equal(first.coupon.audience,'first');
+  assert.ok((await call('/coupons','GET',undefined,admin.token)).coupons.some(p=>p.code==='FIRST'&&p.label==='Desconto na estreia'));
+  await create({code:'VIPTEST',audience:'vip'});
+  assert.ok(!(await call('/coupons','GET',undefined,other.token)).coupons.some(p=>p.code==='VIPTEST'));
   const order=await call('/orders','POST',purchase,admin.token);assert.equal(order.status,201);assert.equal(order.order.discount,1450);
+  assert.ok(!(await call('/coupons','GET',undefined,admin.token)).coupons.some(p=>p.code==='FIRST'));
   assert.equal((await call('/orders','POST',purchase,admin.token)).order.id,order.order.id);
   assert.equal((await call('/orders','POST',{...purchase,requestKey:'promo-order-test-2'},admin.token)).status,400);
   assert.equal((await call('/orders','POST',purchase,other.token)).status,400);

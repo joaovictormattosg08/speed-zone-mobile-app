@@ -14,7 +14,7 @@ test('loyalty: earnings, atomic redemption, account ownership, one-use coupons a
  const call = async (path, token, body) => { const response = await fetch(`http://127.0.0.1:${server.address().port}${path}`, { method: path.startsWith('/admin/orders/') && body ? 'PATCH' : body ? 'POST' : 'GET', headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }, ...(body ? { body: JSON.stringify(body) } : {}) }); return { status: response.status, data: await response.json() }; };
  try {
   const register = email => call('/auth/register', null, { name: 'Teste', surname: 'Piloto', email, password: 'TesteSenha123!' });
-  const a = (await register('a@example.com')).data.token, b = (await register('b@example.com')).data.token;
+  const b = (await register('b@example.com')).data.token, a = (await register('a@example.com')).data.token;
   assert.equal((await call('/loyalty')).status, 401);
   assert.equal((await call('/loyalty', a)).data.balance, 0);
   assert.equal((await call('/loyalty/redeem', a, { rewardId: 'off5', requestKey: 'empty-account' })).status, 400);
@@ -43,7 +43,6 @@ test('loyalty: earnings, atomic redemption, account ownership, one-use coupons a
   const c20 = (await call('/loyalty/redeem', a, { rewardId: 'off20', requestKey: 'redeem-twenty' })).data.coupon;
   const twenty = await call('/orders', a, { ...discounted, requestKey: 'use-twenty', coupon: c20.code }); assert.equal(twenty.data.order.discount, 2900);
   assert.equal((await call('/admin/orders', a)).status, 403);
-  const access = new DatabaseSync(database); access.prepare('INSERT INTO administrators SELECT id, ? FROM users WHERE email = ?').run(new Date().toISOString(),'b@example.com'); access.close();
   assert.ok((await call('/admin/orders', b)).data.orders.length > 0);
   const endpoint = '/admin/orders/' + applied.data.order.id;
   assert.equal((await call(endpoint, a, { expectedStatus:'processing',status:'cancelled' })).status, 403);

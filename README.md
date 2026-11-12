@@ -117,7 +117,7 @@ O resgate debita pontos e emite código aleatório exclusivo da conta, de uso ú
 
 Contas autorizadas veem Minha Conta → Painel Administrativo. A rota `/admin` tem proteção de navegação e a API valida a permissão no banco em cada acesso, inclusive após revogação. Esta versão oferece indicadores e os últimos 20 pedidos, em consulta. Não há edição administrativa ainda.
 
-Para autorizar uma conta existente no servidor: `npm run admin -- email@exemplo.com`. Para revogar: `npm run admin -- email@exemplo.com revoke`. O comando usa DATABASE_PATH de .env.local, quando definido; a autorização é ligada ao ID do usuário e não muda por alteração de e-mail. O cadastro público e a edição do perfil não concedem permissão. Recarregue o app após conceder acesso.
+Para autorizar uma conta existente no servidor: `npm run admin -- email@exemplo.com`. Para revogar: `npm run admin -- email@exemplo.com revoke`. O comando usa DATABASE_PATH de .env.local, quando definido; a autorização é ligada ao ID do usuário e não muda por alteração de e-mail. O primeiro cadastro em um banco sem usuários recebe acesso administrativo automaticamente. Os seguintes recebem o perfil de piloto. Recarregue o app após conceder acesso.
 
 ## Pedidos administrativos
 

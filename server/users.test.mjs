@@ -1,6 +1,5 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { DatabaseSync } from 'node:sqlite';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -12,8 +11,6 @@ test('user management: roles, session revocation, isolation, persistence and aud
  try{
   const credentials={name:'Admin',surname:'Teste',email:'admin@example.com',password:'SenhaTeste123!'};
   const admin=await call('/auth/register','POST',credentials);
-  assert.equal((await call('/admin/users','GET',undefined,admin.token)).status,403);
-  const db=new DatabaseSync(database);db.prepare('INSERT INTO administrators VALUES (?,?)').run(admin.user.id,new Date().toISOString());db.close();
   const draft={name:'Equipe',surname:'Técnica',email:'tech@example.com',phone:'',password:'SenhaTeste123!',role:'technician',blocked:false,archived:false,reason:'',revision:1};
   const created=await call('/admin/users','POST',draft,admin.token);assert.equal(created.status,201);assert.equal(created.user.role,'technician');
   assert.ok(!JSON.stringify(created).includes('SenhaTeste'));assert.ok(created.user.createdAt);

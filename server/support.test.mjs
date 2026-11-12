@@ -1,6 +1,5 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { DatabaseSync } from 'node:sqlite';
 import { mkdtemp, rm, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -13,8 +12,7 @@ test('support replies: admin permissions, customer visibility, retry, conflicts 
   const call=async(path,method='GET',body,token)=>{const response=await fetch(`http://127.0.0.1:${server.address().port}${path}`,{method,headers:{'Content-Type':'application/json',...(token?{Authorization:`Bearer ${token}`}:{})},...(body?{body:JSON.stringify(body)}:{})});return {status:response.status,...await response.json()};};
   try {
     const register=email=>call('/auth/register','POST',{name:'Teste',surname:'Suporte',email,password:'TesteSenha123!'});
-    const owner=await register('pilot@example.com'), admin=await register('admin@example.com'), other=await register('other@example.com');
-    const db=new DatabaseSync(database);db.prepare('INSERT INTO administrators VALUES (?, ?)').run(admin.user.id,new Date().toISOString());db.close();
+    const admin=await register('admin@example.com'), owner=await register('pilot@example.com'), other=await register('other@example.com');
     const attachment='data:image/png;base64,'+(await readFile(new URL('../assets/icon.png',import.meta.url))).toString('base64');
     const created=await call('/support/tickets','POST',{name:'Piloto Teste',email:'pilot@example.com',category:'fitment',description:'Preciso confirmar a aplicação desta peça no meu projeto.',vehicleId:null,attachment,requestKey:'support-create-test'},owner.token);
     assert.equal(created.status,201); const id=created.ticket.id; const path='/admin/support/'+id;

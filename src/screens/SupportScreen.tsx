@@ -98,7 +98,7 @@ export default function SupportScreen({ orderId }: { orderId?: string }) {
     </View>
     <View style={s.card} onLayout={event => { formY.current = event.nativeEvent.layout.y; }}>
       <View style={s.row}>
-        <View style={[s.tile,{backgroundColor:'#eaf2ff'}]}><StoreIcon name="wrench-outline" color="#2563eb" /></View>
+        <View style={[s.tile,{backgroundColor:c.primarySoft}]}><StoreIcon name="wrench-outline" color={c.primary} /></View>
         <View style={s.grow}><Text style={s.section}>Chamado de Engenharia (O.S.)</Text><Text style={s.small}>Compatibilidade, instalação e garantia</Text></View>
       </View>
       <Text style={s.body}>Descreva o que aconteceu e anexe uma foto da peça ou da montagem para análise técnica.</Text>
