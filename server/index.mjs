@@ -53,7 +53,7 @@ export function createApi({ database = resolve('server/data/speedzone.sqlite') }
     try {
       if (origin && !allowed) fail('Origem não permitida.', 403);
       if (allowed) { res.setHeader('Access-Control-Allow-Origin', origin); res.setHeader('Vary', 'Origin'); res.setHeader('Access-Control-Allow-Credentials', 'true'); }
-      if (req.method === 'OPTIONS') { res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PATCH, OPTIONS'); res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization'); res.writeHead(204); res.end(); return; }
+      if (req.method === 'OPTIONS') { res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PATCH, OPTIONS'); res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, ngrok-skip-browser-warning'); res.writeHead(204); res.end(); return; }
       const path = req.url?.split('?')[0];
       if (path === '/health') return send({ ok: true });
       if (path === '/products' && req.method === 'GET') return send({ products: listProducts(db) });
@@ -167,8 +167,8 @@ export function createApi({ database = resolve('server/data/speedzone.sqlite') }
           profile.photo = body.photo;
         }
         if ('cars' in body) {
-          if (!Array.isArray(body.cars) || body.cars.length > 3) fail('Sua garagem comporta até 3 projetos.');
-          profile.cars = body.cars.map(car => Object.fromEntries(['id', 'model', 'engine', 'year', 'color', 'power', 'tune', 'exhaust', 'ignition'].map(key => [key, field(car?.[key], key, ['id', 'model'].includes(key) ? 1 : 0, 100)])));
+          if (!Array.isArray(body.cars) || body.cars.length > 15) fail('Sua garagem comporta até 15 projetos.');
+          profile.cars = body.cars.map(car => Object.fromEntries(['id', 'model', 'engine', 'year', 'color', 'power', 'exhaust'].map(key => [key, field(car?.[key], key, ['id', 'model'].includes(key) ? 1 : 0, 100)])));
           if (new Set(profile.cars.map(car => car.id)).size !== profile.cars.length) fail('Projeto duplicado.');
         }
         if ('activeCarId' in body) profile.activeCarId = body.activeCarId;

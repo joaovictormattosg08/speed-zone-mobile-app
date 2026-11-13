@@ -2,7 +2,7 @@ import { ThemeColors , fonts as f } from '../theme/tokens';
 import { useTheme, useThemedStyles } from '../theme/ThemeContext';
 
 import { useCallback, useRef, useState } from 'react';
-import { ActivityIndicator, Image, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Image, KeyboardAvoidingView, Linking, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useFocusEffect } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
@@ -28,7 +28,7 @@ export default function SupportScreen({ orderId }: { orderId?: string }) {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [pickerBusy, setPickerBusy] = useState(false);
-  const [dialog, setDialog] = useState<'category' | 'vehicle' | 'warranty' | 'whatsapp' | null>(null);
+  const [dialog, setDialog] = useState<'category' | 'vehicle' | 'warranty' | null>(null);
   const [faq, setFaq] = useState<number | null>(null);
   const [showHistory, setShowHistory] = useState(false);
   const pending = useRef<{ signature: string; key: string } | null>(null);
@@ -40,6 +40,11 @@ export default function SupportScreen({ orderId }: { orderId?: string }) {
   const reload = async () => { setLoading(true); setLoadError(''); try { setTickets(await listTickets()); } catch (cause) { setLoadError((cause as Error).message); } finally { setLoading(false); } };
   useFocusEffect(useCallback(() => { let alive = true; let inFlight = false; const load = async () => { if (inFlight) return; inFlight = true; try { const data = await listTickets(); if (alive) { setTickets(data); setLoadError(''); } } catch (cause) { if (alive) setLoadError((cause as Error).message); } finally { inFlight = false; if (alive) setLoading(false); } }; void load(); const timer = setInterval(() => void load(), 10000); return () => { alive = false; clearInterval(timer); }; }, [listTickets]));
   const openForm = () => { setFormOpen(true); setDialog(null); scroll.current?.scrollTo({ y: formY.current, animated: true }); };
+  async function openWhatsApp() {
+    const message = encodeURIComponent('Olá! Vim pelo aplicativo SpeedZone e gostaria de conversar com a equipe do Box.');
+    try { await Linking.openURL(`https://wa.me/5541999627476?text=${message}`); }
+    catch { setError('Não foi possível abrir o WhatsApp neste dispositivo.'); }
+  }
   async function selectImage() {
     if (busy || pickerBusy) return;
     setError(''); setPickerBusy(true);
@@ -83,7 +88,6 @@ export default function SupportScreen({ orderId }: { orderId?: string }) {
           <Text style={s.section}>{[user?.name, user?.surname].filter(Boolean).join(' ') || 'Piloto SpeedZone'}</Text>
           <View style={s.row}><StoreIcon name="flag-checkered" size={16} color={c.muted} /><Text style={[s.body,s.grow]}>{vehicle?.model || 'Sem veículo selecionado'}</Text></View>
         </View>
-        {vehicle?.tune && <Text style={s.stage}>{vehicle.tune}</Text>}
       </View>
       <View style={s.strip}><StoreIcon name="clipboard-text-outline" size={17} color={c.primary} /><Text style={[s.link,s.grow]}>Chamados em andamento</Text><Text style={s.link}>{loading || loadError ? '—' : activeTickets.length}</Text></View>
     </View>
@@ -91,10 +95,10 @@ export default function SupportScreen({ orderId }: { orderId?: string }) {
     <View style={s.card}>
       <View style={s.row}>
         <View style={[s.tile,s.primary]}><StoreIcon name="chat" color={c.onPrimary} /></View>
-        <View style={s.grow}><Text style={s.section}>WhatsApp do Preparador</Text><Text style={s.small}>Canal ainda indisponível</Text></View>
+        <View style={s.grow}><Text style={s.section}>WhatsApp do Preparador</Text><Text style={s.small}>Atendimento direto com a equipe</Text></View>
       </View>
-      <Text style={s.body}>Tem uma dúvida de montagem ou acerto? A equipe pode acompanhar seu projeto pela conversa de um chamado.</Text>
-      <Pressable accessibilityRole="button" onPress={() => setDialog('whatsapp')} style={[s.button,s.primary]}><StoreIcon name="send-outline" color={c.onPrimary} size={17} /><Text style={s.primaryText}>Conversar com o Box</Text></Pressable>
+      <Text style={s.body}>Tem uma dúvida de montagem ou acerto? Converse diretamente com a equipe pelo WhatsApp.</Text>
+      <Pressable accessibilityRole="link" accessibilityLabel="Conversar com o Box pelo WhatsApp" onPress={() => void openWhatsApp()} style={[s.button,s.primary]}><StoreIcon name="whatsapp" color={c.onPrimary} size={19} /><Text style={s.primaryText}>Conversar com o Box</Text></Pressable>
     </View>
     <View style={s.card} onLayout={event => { formY.current = event.nativeEvent.layout.y; }}>
       <View style={s.row}>
@@ -107,7 +111,7 @@ export default function SupportScreen({ orderId }: { orderId?: string }) {
       <Text style={s.label}>Nome do Piloto / Mecânico</Text><TextInput accessibilityLabel="Nome do Piloto / Mecânico" value={name} onChangeText={setName} editable={!busy} maxLength={140} style={s.input} autoComplete="name" />
       <Text style={s.label}>E-mail para Telemetria & Laudos</Text><TextInput accessibilityLabel="E-mail para Telemetria e Laudos" value={email} onChangeText={setEmail} editable={!busy} maxLength={254} keyboardType="email-address" autoCapitalize="none" autoComplete="email" style={s.input} />
       <Text style={s.label}>Tipo de Solicitação / Categoria</Text><Pressable accessibilityRole="button" accessibilityLabel="Selecionar categoria do chamado" disabled={busy} onPress={() => setDialog('category')} style={[s.input, s.row]}><Text style={[s.body, s.grow]}>{supportCategories.find(item => item.id === category)?.label}</Text><StoreIcon name="chevron-down" color={c.muted} size={18} /></Pressable>
-      <Text style={s.label}>Veículo / Projeto Vinculado</Text><Pressable accessibilityRole="button" accessibilityLabel="Alterar veículo do chamado" disabled={busy} onPress={() => setDialog('vehicle')} style={[s.input, s.row]}><StoreIcon name="tune" size={20} /><Text style={[s.body, s.grow]}>{vehicle?.model || 'Sem veículo vinculado'}</Text><Text style={s.micro}>ALTERAR</Text></Pressable>
+      <Text style={s.label}>Veículo / Projeto Vinculado</Text><Pressable accessibilityRole="button" accessibilityLabel="Alterar veículo do chamado" disabled={busy} onPress={() => setDialog('vehicle')} style={[s.input, s.row]}><StoreIcon name="car-outline" size={20} /><Text style={[s.body, s.grow]}>{vehicle?.model || 'Sem veículo vinculado'}</Text><Text style={s.micro}>ALTERAR</Text></Pressable>
       <View style={s.between}><Text style={[s.label, s.grow]}>Descrição Técnica do Sintoma ou Dúvida</Text><Text style={s.micro}>{description.length}/4000</Text></View><TextInput accessibilityLabel="Descrição técnica" value={description} onChangeText={setDescription} editable={!busy} multiline maxLength={4000} placeholder="Descreva o sintoma, a peça, as modificações do veículo e sua dúvida..." placeholderTextColor={c.subtle} style={[s.input, s.textarea]} />
       <Text style={s.label}>Evidências Mecânicas</Text><Pressable accessibilityRole="button" disabled={busy || pickerBusy} onPress={selectImage} style={s.button}><StoreIcon name="camera-plus-outline" size={20} /><Text style={s.buttonText}>{pickerBusy ? 'Lendo imagem...' : attachment ? 'Trocar imagem anexada' : 'Anexar foto ou diagrama (opcional)'}</Text></Pressable><Text style={s.small}>PNG, JPEG ou WebP • até 5 MB • uma imagem por chamado</Text>{attachment && <View style={{ gap: 8 }}><Image accessibilityLabel="Prévia da evidência" source={{ uri: attachment }} resizeMode="contain" style={s.evidence} /><Pressable accessibilityRole="button" disabled={busy} onPress={() => setAttachment(null)} style={s.button}><Text style={s.buttonText}>Remover anexo</Text></Pressable></View>}
       {error !== '' && <Text accessibilityLiveRegion="polite" style={s.error}>{error}</Text>}<Pressable accessibilityRole="button" accessibilityLabel="Registrar chamado técnico" disabled={busy || pickerBusy} onPress={() => void submit()} style={[s.button, s.primary, (busy || pickerBusy) && { opacity: 0.5 }]}><StoreIcon name="send-outline" color={c.onPrimary} size={20} /><Text style={s.primaryText}>{busy ? 'Salvando chamado...' : 'Registrar Solicitação Técnica'}</Text></Pressable><Text style={s.small}>Registro local. Nenhuma mensagem é enviada por WhatsApp ou e-mail.</Text>

@@ -117,8 +117,8 @@ export default function AdminProductFormScreen() {
       <View style={local.card}>
         {heading('tune','Especificações Técnicas',draft.name.trim().length>=3 && draft.id.length>=3?'Calibrado':undefined)}
         <Field label="Nome Comercial da Peça" value={draft.name} onChange={v=>change('name',v)}/>
-        <View style={local.row}>
-          <View style={s.flex}><Field label="SKU SpeedZone" value={draft.id} disabled={!!id} onChange={v=>change('id',v.toUpperCase().replace(/[^A-Z0-9-]/g,''))}/>{!id&&<ProductAction label="Gerar SKU" disabled={busy} onPress={()=>change('id','SZ-'+Date.now().toString(36).toUpperCase()+'-'+Math.random().toString(36).slice(2,6).toUpperCase())}/>}</View>
+        <View style={local.fieldsRow}>
+          <View style={local.fieldColumn}><Field label="SKU SpeedZone" value={draft.id} disabled={!!id} onChange={v=>change('id',v.toUpperCase().replace(/[^A-Z0-9-]/g,''))}/>{!id&&<ProductAction label="Gerar SKU" disabled={busy} onPress={()=>change('id','SZ-'+Date.now().toString(36).toUpperCase()+'-'+Math.random().toString(36).slice(2,6).toUpperCase())}/>}</View>
           <Field label="Cód. Fabricante" value={draft.manufacturerCode??''} onChange={v=>change('manufacturerCode',v)}/>
         </View>
         <View><View style={s.between}><Text style={s.label}>Categoria de Performance</Text><Text style={s.small}>{draft.stage}</Text></View>
@@ -163,7 +163,7 @@ const createLocal = (c: ThemeColors) => StyleSheet.create({
  content:{width:'100%',maxWidth:680,alignSelf:'center',padding:16,gap:16,paddingBottom:32},
  bar:{flexDirection:'row',alignItems:'center',gap:12,paddingHorizontal:16,paddingVertical:10,backgroundColor:c.panel,borderColor:c.surfaceBorder,borderWidth:StyleSheet.hairlineWidth},
  back:{width:40,height:40,borderRadius:12,alignItems:'center',justifyContent:'center',backgroundColor:c.input},
- row:{flexDirection:'row',alignItems:'center',gap:8}, wrap:{flexDirection:'row',flexWrap:'wrap',gap:6},
+  row:{flexDirection:'row',alignItems:'center',gap:8},fieldsRow:{flexDirection:'row',alignItems:'flex-start',gap:8},fieldColumn:{flex:1,minWidth:0,gap:8},wrap:{flexDirection:'row',flexWrap:'wrap',gap:6},
  card:{backgroundColor:c.panel,borderColor:c.surfaceBorder,borderWidth:1,borderRadius:23,padding:18,gap:16},
  kicker:{color:c.subtle,fontFamily:fonts.bold,fontSize:10,letterSpacing:.7},
  title:{color:c.text,fontFamily:fonts.heavy,fontSize:23,lineHeight:25,letterSpacing:-.8},

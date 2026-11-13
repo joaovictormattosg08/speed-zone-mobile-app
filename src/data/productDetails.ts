@@ -8,11 +8,11 @@ export type ProductDetails = {
 };
 const g25: ProductDetails = {
   gallery: [
-    { image: require('../../assets/products/g25-main.png'), label: 'Vista principal do Garrett G25-660' },
-    { image: require('../../assets/products/g25-front.png'), label: 'Vista frontal do compressor' },
-    { image: require('../../assets/products/g25-rear.png'), label: 'Carcaça da turbina' },
-    { image: require('../../assets/products/g25-exploded.png'), label: 'Vista explodida do conjunto' },
-    { image: require('../../assets/products/g25-engine.png'), label: 'Instalação no motor' },
+    { image: require('../../assets/products/g25-main.jpg'), label: 'Vista principal do Garrett G25-660' },
+    { image: require('../../assets/products/g25-front.jpg'), label: 'Vista frontal do compressor' },
+    { image: require('../../assets/products/g25-rear.jpg'), label: 'Carcaça da turbina' },
+    { image: require('../../assets/products/g25-exploded.jpg'), label: 'Vista explodida do conjunto' },
+    { image: require('../../assets/products/g25-engine.jpg'), label: 'Instalação no motor' },
   ],
   seal: '100% ORIGINAL GARRETT', stage: 'STAGE 3 / RACE READY',
   description: 'O conjunto rotativo Garrett G-Series G25-660 Super Core incorpora a mais avançada termodinâmica aerodinâmica de fluxo reverso da Garrett Motorsport. Projetado com rotor forjado usinado CNC em liga aeroespacial e turbina de Mar-M resistente a até 1050°C.',

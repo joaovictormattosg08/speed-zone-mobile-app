@@ -2,6 +2,8 @@ import { ThemeColors , palette as speedPalette, fonts as f } from '../theme/toke
 import { useTheme, useThemedStyles } from '../theme/ThemeContext';
 
 import { CatalogStatus } from '../components/CatalogStatus';
+import { useAuth } from '../context/AuthContext';
+import { matchesVehicle } from '../utils/vehicleCompatibility';
 import { useCatalog } from '../context/CatalogContext';
 import { PilotAvatar } from '../components/PilotAvatar';
 import { ComponentProps, PropsWithChildren, useEffect, useState } from 'react';
@@ -29,11 +31,13 @@ function Accordion({ title, icon, color, initiallyOpen = false, children }: Prop
   </View>;
 }
 
-export default function ProductScreen({ id }: { id: string }) {
+export default function ProductScreen({ id, vehicleId }: { id: string; vehicleId?: string }) {
   const { colors: c } = useTheme();
   const s = useThemedStyles(createS);
 
   const { products, loading: catalogLoading, error: catalogError } = useCatalog();
+  const { user } = useAuth();
+  const car = user?.cars.find(item => item.id === (vehicleId ?? user.activeCarId));
   const product = products.find(item => item.id === id);
   const { cart, add, favorites, toggleFavorite } = useStore();
   const [slide, setSlide] = useState(0);
@@ -108,7 +112,8 @@ export default function ProductScreen({ id }: { id: string }) {
           {(cart[id] ?? 0) > 0 && <Text style={s.cartHint}>{cart[id]} no carrinho · {remaining} {remaining === 1 ? 'unidade disponível' : 'unidades disponíveis'} para adicionar</Text>}
           <View style={s.simulation}><View style={s.simulationLabel}><StoreIcon name="tune" size={14} color={c.subtle} /><Text style={s.micro}>Simular disponibilidade:</Text></View></View>
           <View style={s.accordions}>
-            <Accordion title="Descrição & Aplicação Mecânica" icon="information-outline" initiallyOpen><Text style={s.body}>{details.description}</Text><View style={s.applications}><Text style={s.applicationsTitle}>APLICAÇÕES DE REFERÊNCIA:</Text>{details.applications.map(application => <View style={s.application} key={application}><StoreIcon name="check" size={15} /><Text style={s.applicationText}>{application}</Text></View>)}</View></Accordion>
+            <Accordion title="Descrição & Aplicação Mecânica" icon="information-outline" initiallyOpen>
+              {car && <Text style={s.body}>{car.model} · {matchesVehicle(product, car) ? 'Aplicação indicada no catálogo. Confira os requisitos de instalação.' : 'Compatibilidade não confirmada.'}</Text>}<Text style={s.body}>{details.description}</Text><View style={s.applications}><Text style={s.applicationsTitle}>APLICAÇÕES DE REFERÊNCIA:</Text>{details.applications.map(application => <View style={s.application} key={application}><StoreIcon name="check" size={15} /><Text style={s.applicationText}>{application}</Text></View>)}</View></Accordion>
             <Accordion title="Ficha Técnica & Telemetria" icon="tune" color={c.primary}><View style={s.metrics}>{details.metrics.map((metric, index) => <View key={metric.label} style={s.metric}><Text style={s.micro}>{metric.label}</Text><Text style={[s.metricValue, index === 0 && { color: c.primary }]}>{metric.value}</Text></View>)}</View><View>{details.specs.map(([label, value], index) => <View key={label} style={[s.specRow, index % 2 === 0 && { backgroundColor: c.panel }]}><Text style={s.specLabel}>{label}:</Text><Text style={[s.specValue, index === details.specs.length - 1 && { color: c.primary }]}>{value}</Text></View>)}</View></Accordion>
             <Accordion title="Calcular Frete & Prazo de Entrega" icon="truck-delivery-outline" color="#ffb95f"><View style={s.shippingForm}><TextInput accessibilityLabel="CEP de entrega" placeholder="00000-000" placeholderTextColor={c.subtle} keyboardType="number-pad" maxLength={9} value={cep} onChangeText={value => { setCep(value.replace(/\D/g, '').slice(0, 8).replace(/(\d{5})(\d)/, '$1-$2')); setShipping(false); setCepError(''); }} onSubmitEditing={calculateShipping} style={s.cep} /><Pressable accessibilityRole="button" onPress={calculateShipping} style={s.calculate}><Text style={s.calculateText}>Calcular</Text></Pressable></View>{cepError !== '' && <Text accessibilityRole="alert" style={s.error}>{cepError}</Text>}{shipping && <View accessibilityLiveRegion="polite" style={s.shippingResults}><Text style={s.shippingNotice}>Simulação para {cep}. Valores e prazos ilustrativos.</Text>{shippingOptions(cep.replace(/\D/g, ''), Math.round(product.price * 100) * selectedQuantity).map(option => <View key={option.service} style={s.shippingOption}><StoreIcon name={option.service === 'express' ? 'lightning-bolt-outline' : 'package-variant-closed'} size={20} /><View style={s.flex}><Text style={s.applicationText}>{option.label}</Text><Text style={s.body}>{option.days}</Text></View><Text style={s.shippingPrice}>{money(option.price / 100)}</Text></View>)}</View>}</Accordion>
           </View>

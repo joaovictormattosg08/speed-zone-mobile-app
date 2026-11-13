@@ -10,6 +10,8 @@
       "supportsTablet": true
     },
     "android": {
+      "package": "com.joaovictor.speedzone",
+      "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./assets/speedzone-foreground.png",
         "backgroundColor": "#0B0F0D"
@@ -29,11 +31,17 @@
         "expo-image-picker",
         {
           "photosPermission": "Autorize a SpeedZone a selecionar sua foto de perfil.",
-          "cameraPermission": false,
+          "cameraPermission": "Autorize a SpeedZone a tirar sua foto de perfil.",
           "microphonePermission": false
         }
       ]
     ],
-    "scheme": "speedzone"
+    "scheme": "speedzone",
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "368e1138-40a9-4524-bdaf-152522d5f00f"
+      }
+    }
   }
 }

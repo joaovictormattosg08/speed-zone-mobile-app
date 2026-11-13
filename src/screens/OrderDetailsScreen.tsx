@@ -71,6 +71,7 @@ export default function OrderDetailsScreen({ id, preview }: { id: string; previe
           <View style={s.destination}><StoreIcon name="home-map-marker" color="#047857" size={17} /><Text style={s.pinText}>Destino</Text></View>
           {order.status === 'transit' && <View style={s.van}><StoreIcon name="truck-delivery" color="#fff" size={24} /></View>}
         </View>
+        <OrderProgress status={order.status} tracking />
       </View>
       <View style={s.card}>
         <View style={s.between}>
@@ -81,7 +82,6 @@ export default function OrderDetailsScreen({ id, preview }: { id: string; previe
           </View>
           <View style={s.tile}><StoreIcon name="timer-outline" size={26} color={c.primary} /></View>
         </View>
-        <OrderProgress status={order.status} />
         <View style={s.divider} />
         <View style={s.row}>
           <View style={s.tile}><StoreIcon name="motorbike" color={c.primary} /></View>

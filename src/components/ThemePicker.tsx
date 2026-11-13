@@ -16,8 +16,8 @@ export function ThemePicker({ compact = false }: { compact?: boolean }) {
     {!compact && <><Text style={s.title}>Do seu jeito</Text><Text style={s.description}>Escolha a aparência da sua garagem.</Text></>}
     <View accessibilityRole="radiogroup" accessibilityLabel="Tema do aplicativo" style={s.options}>
       {options.map(option => <Pressable key={option.value} accessibilityRole="radio" accessibilityLabel={`Tema ${option.label.toLowerCase()}`} accessibilityState={{ checked: preference === option.value }} onPress={() => setPreference(option.value as ThemePreference)} style={[s.option, preference === option.value && s.selected]}>
-        <MaterialCommunityIcons name={option.icon} size={18} color={preference === option.value ? colors.primary : colors.muted} />
-        <Text style={[s.label, preference === option.value && { color: colors.primary }]}>{option.label}</Text>
+        <View style={s.optionIcon}><MaterialCommunityIcons name={option.icon} size={18} color={preference === option.value ? colors.primary : colors.muted} /></View>
+        <Text numberOfLines={1} style={[s.label, preference === option.value && { color: colors.primary }]}>{option.label}</Text>
       </Pressable>)}
     </View>
     {!!storageError && <Text accessibilityRole="alert" style={s.error}>{storageError}</Text>}
@@ -28,8 +28,9 @@ const createStyles = (c: ThemeColors) => StyleSheet.create({
   compact: { marginVertical: 16, gap: 8 },
   title: { fontFamily: fonts.bold, fontSize: 18, color: c.text },
   description: { fontFamily: fonts.regular, fontSize: 13, color: c.muted, marginBottom: 8 },
-  options: { flexDirection: 'row', backgroundColor: c.input, borderRadius: 16, padding: 4, gap: 4 },
-  option: { flex: 1, minHeight: 44, flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'center', gap: 6, borderRadius: 12, padding: 6 },
+  options: { width: '100%', flexDirection: 'row', alignItems: 'stretch', backgroundColor: c.input, borderRadius: 16, padding: 4, gap: 4 },
+  option: { flexBasis: 0, flexGrow: 1, flexShrink: 1, minWidth: 0, minHeight: 44, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 6, borderRadius: 12, paddingHorizontal: 6, paddingVertical: 8 },
+  optionIcon: { width: 20, alignItems: 'center', justifyContent: 'center' },
   selected: { backgroundColor: c.panel, boxShadow: '0 2px 8px #00000008' },
   label: { fontFamily: fonts.medium, fontSize: 12, color: c.muted },
   error: { fontFamily: fonts.regular, fontSize: 12, color: c.error },

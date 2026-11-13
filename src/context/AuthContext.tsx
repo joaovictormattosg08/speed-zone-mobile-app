@@ -12,7 +12,7 @@ import { createContext, PropsWithChildren, useCallback, useContext, useEffect, u
 import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 
-export type PilotCar = { id: string; model: string; engine: string; year: string; color: string; power: string; tune: string; exhaust: string; ignition: string };
+export type PilotCar = { id: string; model: string; engine: string; year: string; color: string; power: string; exhaust: string };
 export type Pilot = { canSupport?: boolean; isAdmin?: boolean; deliveryAddress?: DeliveryAddress; id: string; name: string; surname: string; email: string; phone: string; photo: string | null; cars: PilotCar[]; activeCarId: string | null; address: string };
 type Credentials = { email: string; password: string; remember: boolean; name?: string; surname?: string };
 type CouponDashboard = { coupons: Promotion[]; metrics: { savings:number; used:number; average:number; growth:number|null } };
@@ -25,6 +25,7 @@ const api = (Platform.OS === 'android' ? process.env.EXPO_PUBLIC_ANDROID_API_URL
   || process.env.EXPO_PUBLIC_API_URL
   || (developmentHost && `http://${new URL('http://' + developmentHost).hostname}:3001`)
   || (Platform.OS === 'web' && typeof window !== 'undefined' ? `http://${window.location.hostname}:3001` : 'http://127.0.0.1:3001');
+const tunnelHeaders: Record<string, string> = api.includes('ngrok-free.') ? { 'ngrok-skip-browser-warning': 'speedzone-app' } : {};
 export function AuthProvider({ children }: PropsWithChildren) {
   const [user, setUser] = useState<Pilot | null>(null);
   const [loading, setLoading] = useState(true);
@@ -33,7 +34,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const request = useCallback(async (path: string, method = 'GET', body?: unknown, timeoutMs = 15000) => {
     let response: Response;
     const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), timeoutMs);
-    try { response = await fetch(`${api}${path}`, { method, credentials: 'include', signal: controller.signal, headers: { ...(body ? { 'Content-Type': 'application/json' } : {}), ...(token.current ? { Authorization: `Bearer ${token.current}` } : {}) }, ...(body ? { body: JSON.stringify(body) } : {}) }); }
+    try { response = await fetch(`${api}${path}`, { method, credentials: 'include', signal: controller.signal, headers: { ...tunnelHeaders, ...(body ? { 'Content-Type': 'application/json' } : {}), ...(token.current ? { Authorization: `Bearer ${token.current}` } : {}) }, ...(body ? { body: JSON.stringify(body) } : {}) }); }
     catch { throw new Error(`Não foi possível conectar à API em ${api}. Confira se a API está rodando e se este endereço é acessível no dispositivo.`); }
     finally { clearTimeout(timer); }
     const data = await response.json();

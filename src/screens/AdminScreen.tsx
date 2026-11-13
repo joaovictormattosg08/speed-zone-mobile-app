@@ -11,7 +11,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../context/AuthContext';
 import { AdminOverview } from '../data/admin';
 import { money } from '../data/products';
-import { StoreIcon } from '../components/StoreHeader';
+import { HeaderAction, StoreIcon } from '../components/StoreHeader';
 import { PilotAvatar } from '../components/PilotAvatar';
 export default function AdminScreen() {
   const { colors: c } = useTheme();
@@ -36,7 +36,7 @@ export default function AdminScreen() {
    {label:'Pilotos',value:data.customers,note:'Contas cadastradas',icon:'account-group-outline',color:c.primary,path:'/admin-users'}
  ] as const : [];
  const alerts = metrics.slice(0,3).filter(metric => typeof metric.value === 'number' && metric.value > 0);
- return <SafeAreaView edges={['top','left','right','bottom']} style={s.safe}><AdminThemeToggle/><View style={s.header}><View style={s.brandIcon}><StoreIcon name="speedometer" color={c.primary} size={25}/></View><View style={s.grow}><Text style={s.eyebrow}>OPERAÇÕES</Text><Text style={s.title}>SpeedZone Admin</Text></View><Pressable accessibilityRole="button" accessibilityLabel="Ver alertas operacionais" onPress={()=>scroll.current?.scrollTo({y:alertsY.current,animated:true})} style={s.iconButton}><StoreIcon name="bell-outline" color={c.muted} /></Pressable><Pressable accessibilityRole="button" accessibilityLabel="Voltar para Minha Conta" onPress={()=>router.replace('/(main)/account')}><PilotAvatar size={32}/></Pressable></View>
+ return <SafeAreaView edges={['top','left','right','bottom']} style={s.safe}><View style={s.header}><View style={s.brandIcon}><StoreIcon name="speedometer" color={c.primary} size={25}/></View><View style={s.grow}><Text style={s.eyebrow}>OPERAÇÕES</Text><Text style={s.title}>SpeedZone Admin</Text></View><AdminThemeToggle inline /><HeaderAction icon="bell-outline" label="Ver alertas operacionais" count={alerts.length} onPress={()=>scroll.current?.scrollTo({y:alertsY.current,animated:true})} /><Pressable accessibilityRole="button" accessibilityLabel="Voltar para Minha Conta" onPress={()=>router.replace('/(main)/account')}><PilotAvatar size={32}/></Pressable></View>
  <ScrollView ref={scroll} refreshControl={<RefreshControl refreshing={loading} onRefresh={()=>setRevision(v=>v+1)} tintColor={c.primary}/>} contentContainerStyle={s.content}>
  {data && <View style={s.panel}>
    <View style={s.between}><Text style={s.title}>Faturamento do dia</Text><Text style={s.status}>{change === null ? 'Sem base ontem' : change.toLocaleString('pt-BR',{style:'percent', maximumFractionDigits:1,signDisplay:'exceptZero'}) + ' vs. ontem'}</Text></View>
