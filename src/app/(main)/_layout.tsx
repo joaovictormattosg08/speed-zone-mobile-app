@@ -1,17 +1,36 @@
-import { View } from 'react-native';
-import { useTheme } from '../../theme/ThemeContext';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { Tabs } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useStore } from '../../context/StoreContext';
-import { fonts } from '../../theme/tokens';
+import { useTheme } from '../../theme/ThemeContext';
+import {
+  SpeedzoneTabBar,
+  TAB_BAR_RESERVED_HEIGHT,
+  TAB_ROUTES,
+} from '../../components/SpeedzoneTabBar';
+
 function Navigation() {
+  const insets = useSafeAreaInsets();
   const { colors } = useTheme();
 
-  const { count } = useStore();
-  const insets = useSafeAreaInsets();
-  return <Tabs initialRouteName="home" screenOptions={{ headerShown: false, tabBarActiveBackgroundColor: colors.primary, tabBarItemStyle: { borderRadius: 28, overflow: 'hidden', marginHorizontal: 3 }, tabBarActiveTintColor: colors.onPrimary, tabBarInactiveTintColor: colors.muted, tabBarHideOnKeyboard: true, tabBarStyle: { backgroundColor: colors.panel, borderTopColor: colors.surfaceBorder, height: 72 + insets.bottom, paddingTop: 7, paddingBottom: Math.max(insets.bottom, 6) }, tabBarLabelStyle: { fontFamily: fonts.bold, fontSize: 10, letterSpacing: 0.2 }, tabBarBadgeStyle: { backgroundColor: colors.primary, color: colors.onPrimary, fontSize: 10 } }}>
-    {([{ name: 'home', title: 'INÍCIO', icon: 'home-outline' }, { name: 'catalog', title: 'CATÁLOGO', icon: 'tools' }, { name: 'cart', title: 'CARRINHO', icon: 'cart-outline' }, { name: 'orders', title: 'PEDIDOS', icon: 'receipt-text-outline' }, { name: 'account', title: 'CONTA', icon: 'garage-variant' }] as const).map(tab => <Tabs.Screen key={tab.name} name={tab.name} options={{ title: tab.title, tabBarBadge: tab.name === 'cart' && count ? count : undefined, tabBarIcon: ({ color }) => <View style={{ width: 44, height: 32, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent' }}><MaterialCommunityIcons name={tab.icon} size={23} color={color} /></View> }} />)}
-  </Tabs>;
+  return (
+    <Tabs
+      initialRouteName="home"
+      tabBar={props => <SpeedzoneTabBar {...props} />}
+      screenOptions={{
+        headerShown: false,
+        tabBarHideOnKeyboard: true,
+        sceneStyle: {
+          paddingBottom: TAB_BAR_RESERVED_HEIGHT + insets.bottom,
+          backgroundColor: colors.background,
+        },
+      }}
+    >
+      {Object.entries(TAB_ROUTES).map(([name, config]) => (
+        <Tabs.Screen key={name} name={name} options={{ title: config.label }} />
+      ))}
+    </Tabs>
+  );
 }
-export default function MainLayout() { return <Navigation />; }
+
+export default function MainLayout() {
+  return <Navigation />;
+}

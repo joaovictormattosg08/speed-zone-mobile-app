@@ -10,6 +10,8 @@
       "supportsTablet": true
     },
     "android": {
+      "package": "com.joaovictor.speedzone",
+      "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./assets/speedzone-foreground.png",
         "backgroundColor": "#0B0F0D"
@@ -34,6 +36,12 @@
         }
       ]
     ],
-    "scheme": "speedzone"
+    "scheme": "speedzone",
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "368e1138-40a9-4524-bdaf-152522d5f00f"
+      }
+    }
   }
 }
