@@ -46,24 +46,12 @@ export default function PilotScreen() {
     catch (cause) { setError((cause as Error).message); }
     finally { setBusy(false); }
   }
-  async function pickPhoto(source: 'camera' | 'gallery') {
+  async function pickPhoto() {
+    // Invoke directly from the press event so browsers can open the file chooser.
     if (busy) return;
-    setError(''); setFeedback('');
+    setError('');
     try {
-      if (source === 'camera' && Platform.OS !== 'web') {
-        const permission = await ImagePicker.requestCameraPermissionsAsync();
-        if (!permission.granted) {
-          setError('Permita o acesso à câmera nos ajustes do aparelho ou escolha uma foto da galeria.');
-          return;
-        }
-      }
-      const options: ImagePicker.ImagePickerOptions = {
-        mediaTypes: ['images'], allowsEditing: true, aspect: [1, 1], quality: 0.8, base64: true,
-      };
-      // On web both pickers must open directly from the button press.
-      const result = await (source === 'camera'
-        ? ImagePicker.launchCameraAsync(options)
-        : ImagePicker.launchImageLibraryAsync(options));
+      const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, aspect: [1, 1], quality: 0.8, base64: true });
       if (result.canceled) return;
       const photo = result.assets[0];
       if (!photo.base64) throw new Error('Não foi possível ler a foto. Escolha outro arquivo.');
@@ -95,7 +83,7 @@ export default function PilotScreen() {
   }
   const carSuggestions = editor === 'car' && !vehicleSelected ? searchVehiclePresets(draft.model || '', 8) : [];
   function selectVehicle(vehicle: VehiclePreset) {
-    setDraft(previous => ({ ...previous, model: [vehicle.brand, vehicle.model, vehicle.generation].filter(Boolean).join(' '), engine: vehicle.engine, year: vehicle.years, power: vehicle.stockPower, exhaust: previous.exhaust || 'Original' }));
+    setDraft(previous => ({ ...previous, model: `${vehicle.brand} ${vehicle.model} ${vehicle.generation}`, engine: vehicle.engine, year: vehicle.years, power: vehicle.stockPower, exhaust: previous.exhaust || 'Original' }));
     setVehicleSelected(true);
   }
   function deleteCar(car: PilotCar) {
@@ -133,18 +121,10 @@ export default function PilotScreen() {
     <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
       <View style={s.profile}>
         <View style={s.row}>
-          <Pressable accessibilityRole="button" accessibilityLabel="Tirar foto de perfil" disabled={busy} onPress={() => void pickPhoto('camera')} style={s.photo}><PilotAvatar size={82} /><View style={s.camera}><StoreIcon name="camera-plus-outline" size={17} color={c.onPrimary} /></View></Pressable>
+          <Pressable accessibilityRole="button" accessibilityLabel="Alterar foto de perfil" disabled={busy} onPress={pickPhoto} style={s.photo}><PilotAvatar size={82} /><View style={s.camera}><StoreIcon name="camera-plus-outline" size={17} color={c.onPrimary} /></View></Pressable>
           <View style={s.grow}><View style={s.badge}><StoreIcon name="speedometer" size={13} /><Text style={s.badgeText}>PILOTO SPEEDZONE • DEMO</Text></View><Text style={s.name}>{user.name} {user.surname}</Text><Text style={s.secondary}>{user.email}</Text><View style={[s.row, { gap: 5, marginTop: 8 }]}><StoreIcon name="phone-outline" size={14} color={c.subtle} /><Text style={s.secondary}>{user.phone || 'Adicione seu telefone'}</Text></View></View>
         </View>
-        <View style={s.photoActions}>
-          {busy ? <Text style={s.secondary}>Salvando...</Text> : <>
-            <Pressable accessibilityRole="button" onPress={() => void pickPhoto('camera')} style={s.textButton}>
-              <Text style={s.link}>Tirar foto</Text>
-            </Pressable>
-            <Pressable accessibilityRole="button" onPress={() => void pickPhoto('gallery')} style={s.textButton}>
-              <Text style={s.link}>Escolher da galeria</Text>
-            </Pressable>
-          </>}{user.photo && <Pressable accessibilityRole="button" disabled={busy} onPress={() => action(() => update({ photo: null }), 'Foto removida.')} style={s.textButton}><Text style={s.subtle}>Remover foto</Text></Pressable>}<Text style={s.tiny}>PNG, JPG ou WebP • até 5 MB</Text></View>
+        <View style={s.photoActions}><Pressable accessibilityRole="button" accessibilityLabel="Escolher foto do computador" disabled={busy} onPress={pickPhoto} style={s.textButton}><Text style={s.link}>{busy ? 'Salvando...' : 'Escolher foto'}</Text></Pressable>{user.photo && <Pressable accessibilityRole="button" disabled={busy} onPress={() => action(() => update({ photo: null }), 'Foto removida.')} style={s.textButton}><Text style={s.subtle}>Remover foto</Text></Pressable>}<Text style={s.tiny}>PNG, JPG ou WebP • até 5 MB</Text></View>
         <Pressable accessibilityRole="button" disabled={busy} onPress={() => openEditor('profile')} style={s.button}><StoreIcon name="account-edit-outline" size={18} /><Text style={s.buttonText}>Editar Dados Pessoais</Text></Pressable>
       </View>
       {(error || feedback) !== '' && <Text accessibilityLiveRegion="polite" style={[s.feedback, error ? { color: c.error } : undefined]}>{error || feedback}</Text>}
@@ -173,7 +153,7 @@ export default function PilotScreen() {
             {fields.map(([key, label]) => <View key={key} style={{ gap: 7 }}>
               <Text style={s.fieldLabel}>{label}</Text>
               <TextInput accessibilityLabel={label} value={draft[key] || ''} editable={!busy} onChangeText={value => { setDraft(previous => ({ ...previous, [key]: value })); if (key === 'model') setVehicleSelected(false); }} style={s.input} autoCapitalize={key === 'email' ? 'none' : 'sentences'} keyboardType={key === 'email' ? 'email-address' : key === 'phone' ? 'phone-pad' : ['year', 'power'].includes(key) ? 'numeric' : 'default'} maxLength={key === 'address' ? 300 : 100} multiline={key === 'address'} />
-              {key === 'model' && carSuggestions.length > 0 && <View style={s.suggestions}>{carSuggestions.map(vehicle => <Pressable key={vehicle.id} accessibilityRole="button" accessibilityLabel={`Selecionar ${[vehicle.brand, vehicle.model, vehicle.generation, vehicle.years].filter(Boolean).join(' ')}`} onPress={() => selectVehicle(vehicle)} style={s.suggestion}><View style={s.grow}><Text style={s.suggestionTitle}>{vehicle.brand} {vehicle.model}</Text><Text style={s.secondary}>{[vehicle.generation, vehicle.years, vehicle.engine].filter(Boolean).join(' · ')}</Text></View>{vehicle.stockPower !== '' && <Text style={s.powerBadge}>{vehicle.stockPower} CV</Text>}</Pressable>)}</View>}
+              {key === 'model' && carSuggestions.length > 0 && <View style={s.suggestions}>{carSuggestions.map(vehicle => <Pressable key={vehicle.id} accessibilityRole="button" accessibilityLabel={`Selecionar ${vehicle.brand} ${vehicle.model} ${vehicle.generation}`} onPress={() => selectVehicle(vehicle)} style={s.suggestion}><View style={s.grow}><Text style={s.suggestionTitle}>{vehicle.brand} {vehicle.model}</Text><Text style={s.secondary}>{vehicle.generation}  {vehicle.years}  {vehicle.engine}</Text></View><Text style={s.powerBadge}>{vehicle.stockPower} CV</Text></Pressable>)}</View>}
             </View>)}
             {error !== '' && <Text accessibilityLiveRegion="polite" style={{ color: c.error }}>{error}</Text>}
           </ScrollView>

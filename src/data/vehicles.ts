@@ -1,5 +1,3 @@
-import modelYears from './vehicleModelYears.json';
-
 export type VehiclePreset = {
   id: string;
   brand: string;
@@ -17,7 +15,7 @@ const group = (brand: string, rows: VehicleRow[]): VehiclePreset[] => rows.map((
   id: slug(`${brand}-${model}-${generation}-${years}`), brand, model, generation, years, engine, stockPower,
 }));
 
-const detailedPresets: VehiclePreset[] = [
+export const vehiclePresets: VehiclePreset[] = [
   ...group('BMW', [
     ['1M Coupé','E82','2011–2012','3.0 biturbo N54','340'],
     ['M2','F87','2016–2018','3.0 turbo N55','370'], ['M2 Competition','F87','2019–2021','3.0 biturbo S55','410'], ['M2 CS','F87','2020–2021','3.0 biturbo S55','450'],
@@ -106,40 +104,13 @@ const detailedPresets: VehiclePreset[] = [
   ]),
 ];
 
-// NHTSA vPIC model-year records. These entries do not include trim specifications.
-export const vehiclePresets = [
-  ...detailedPresets,
-  ...Object.entries(modelYears).flatMap(([brand, rows]) =>
-    group(brand, rows.map(([model, year]) => [String(model), '', String(year), '', ''])),
-  ),
-];
-
-const normalized = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-  .toLocaleLowerCase('pt-BR').replace(/[^a-z0-9]+/g, ' ').trim();
-const searchIndex = vehiclePresets.map(vehicle => {
-  const [start, end] = (vehicle.years.match(/\b\d{4}\b/g) ?? []).map(Number);
-  return {
-    vehicle,
-    modelWords: normalized(`${vehicle.brand} ${vehicle.model}`).split(' '),
-    text: normalized(`${vehicle.brand} ${vehicle.model} ${vehicle.generation} ${vehicle.years} ${vehicle.engine}`),
-    start,
-    end: end ?? (vehicle.years.endsWith('+') ? Infinity : start),
-  };
-});
+const normalized = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('pt-BR');
 
 export function searchVehiclePresets(query: string, limit = 8) {
   const terms = normalized(query).trim().split(/\s+/).filter(Boolean);
-  if (!terms.length || limit <= 0) return [];
-  const matches = searchIndex.flatMap(({ vehicle, modelWords, text, start, end }) => {
-    let score = 0;
-    for (const term of terms) {
-      if (/^(19|20)\d{2}$/.test(term)) {
-        const year = Number(term);
-        if (year < start || year > end || !start) return [];
-      } else if (!text.includes(term)) return [];
-      else if (modelWords.includes(term)) score++;
-    }
-    return [{ vehicle, score }];
-  });
-  return matches.sort((a, b) => b.score - a.score).slice(0, limit).map(match => match.vehicle);
+  if (!terms.length) return [];
+  return vehiclePresets.filter(vehicle => {
+    const haystack = normalized(`${vehicle.brand} ${vehicle.model} ${vehicle.generation} ${vehicle.years} ${vehicle.engine}`);
+    return terms.every(term => haystack.includes(term));
+  }).slice(0, limit);
 }

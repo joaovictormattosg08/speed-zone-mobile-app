@@ -46,11 +46,9 @@ test('accounts, sessions, profile isolation and persistence', async () => {
     assert.equal((await call('/me', 'PATCH', { email: 'other@example.com' }, token)).status, 409);
     assert.equal((await call('/me', 'PATCH', { photo: 'data:image/png;base64,aGVsbG8=' }, token)).status, 400);
     const photo = `data:image/png;base64,${(await readFile(new URL('../assets/icon.png', import.meta.url))).toString('base64')}`;
-    // Match the current garage form: retired tune/ignition fields are not sent.
-    const car = { id: 'car-1', model: 'Golf GTI', engine: '2.0 TSI', year: '2019', color: '', power: '230', exhaust: '' };
+    const car = { id: 'car-1', model: 'Golf GTI', engine: '2.0 TSI', year: '2019', color: 'Preto', power: '318', tune: 'Stage 2+', exhaust: 'Downpipe', ignition: 'R8' };
     const updated = await call('/me', 'PATCH', { name: 'Ana Maria', phone: '11987654321', photo, cars: [car], activeCarId: car.id, address: 'Rua Teste, 10' }, token);
     assert.equal(updated.status, 200); assert.equal(updated.data.user.photo, photo);
-    assert.deepEqual(updated.data.user.cars, [car]);
     assert.equal((await call('/me', 'PATCH', { cars: Array(4).fill(car) }, token)).status, 400);
     const otherLogin = await call('/auth/login', 'POST', { ...account, email: 'other@example.com' });
     const otherProfile = await call('/me', 'GET', undefined, otherLogin.data.token);

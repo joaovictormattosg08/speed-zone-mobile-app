@@ -6,12 +6,12 @@ import { useTheme, useThemedStyles } from '../theme/ThemeContext';
 import { fonts, ThemeColors } from '../theme/tokens';
 import { StoreIcon } from './StoreHeader';
 
-export function ProductCard({ product, list = false, vehicleId }: { product: Product; list?: boolean; vehicleId?: string }) {
+export function ProductCard({ product, list = false }: { product: Product; list?: boolean }) {
   const { colors } = useTheme();
   const s = useThemedStyles(createStyles);
   const { cart, add } = useStore();
   const unavailable = (product.stock ?? 0) <= (cart[product.id] || 0);
-  const open = () => router.push({ pathname: '/product/[id]', params: { id: product.id, ...(vehicleId ? { vehicleId } : {}) } });
+  const open = () => router.push({ pathname: '/product/[id]', params: { id: product.id } });
   return <View style={[s.card, list && s.list]}>
     <Pressable accessibilityRole="button" accessibilityLabel={`Ver foto e detalhes de ${product.name}`} onPress={open} style={[s.media, list && s.listMedia]}>
       <Image source={product.image} style={s.image} resizeMode="contain" />

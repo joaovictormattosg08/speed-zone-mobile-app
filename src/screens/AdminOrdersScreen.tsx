@@ -12,7 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../context/AuthContext';
 import { AdminOrder } from '../data/admin';
 import { OrderStatus, statusLabels } from '../data/orders';
-import { HeaderAction, StoreIcon } from '../components/StoreHeader';
+import { StoreIcon } from '../components/StoreHeader';
 import { PilotAvatar } from '../components/PilotAvatar';
 import { CheckoutButton, OrderTotals } from '../components/CheckoutUI';
 import { money } from '../data/products';
@@ -44,10 +44,10 @@ export default function AdminOrdersScreen() {
  const todayRevenue = todayOrders.reduce((sum,order)=>sum+order.total,0);
  const yesterday = businessDate.format(new Date(Date.parse(today.split('/').reverse().join('-')+'T12:00:00Z')-86400000));
  const previous = orders.filter(o=>o.status!=='cancelled' && businessDate.format(new Date(o.createdAt))===yesterday).reduce((sum,o)=>sum+o.total,0);
- return <SafeAreaView style={s.safe}><View style={s.header}>
+ return <SafeAreaView style={s.safe}><AdminThemeToggle/><View style={s.header}>
    <Pressable accessibilityRole="button" accessibilityLabel="Voltar ao Dashboard" onPress={()=>router.replace('/admin')} style={s.round}><StoreIcon name="arrow-left" color={c.text}/></Pressable>
    <View style={s.flex}><Text style={s.title}>Vendas e Pedidos</Text><Text style={s.small}>Painel de Operações SpeedZone</Text></View>
-   <AdminThemeToggle inline /><HeaderAction icon="bell-outline" label="Ver pedidos aguardando envio" count={orders.filter(order => matches(order.status, 'shipping')).length} onPress={()=>{setFilter('shipping');setQuery('');}} /><PilotAvatar size={38}/>
+   <Pressable accessibilityRole="button" accessibilityLabel="Ver pedidos aguardando envio" onPress={()=>{setFilter('shipping');setQuery('');}} style={s.round}><StoreIcon name="bell-outline" color={c.text}/></Pressable><PilotAvatar size={38}/>
  </View>
  <FlatList data={visible} keyExtractor={item=>item.id} contentContainerStyle={s.content} refreshing={loading} onRefresh={()=>setRevision(v=>v+1)} ListHeaderComponent={<View style={{gap:18}}>{!!notice&&<Pressable accessibilityRole="button" accessibilityLabel="Fechar confirmação" onPress={()=>setNotice('')} style={s.toast}><Text accessibilityLiveRegion="polite" style={s.toastText}>✓ {notice}  ×</Text></Pressable>}<View style={[s.summary,s.between]}><View style={s.flex}><Text style={s.small}>FATURAMENTO HOJE</Text><Text style={s.total}>{money(todayRevenue/100)}</Text><Text style={s.green}>{previous>0 ? ((todayRevenue-previous)/previous).toLocaleString('pt-BR',{style:'percent',maximumFractionDigits:1,signDisplay:'exceptZero'})+' vs. ontem • ' : ''}{todayOrders.length} {todayOrders.length === 1 ? 'pedido' : 'pedidos'}</Text></View><View style={s.wallet}><StoreIcon name="wallet-outline" color={c.primary}/></View></View><View style={s.row}><View style={[s.search,s.flex]}><StoreIcon name="magnify" color={c.subtle}/><TextInput accessibilityLabel="Buscar pedidos administrativos" value={query} onChangeText={setQuery} placeholder="Buscar por pedido, cliente ou peça" placeholderTextColor={c.subtle} style={s.input}/></View><Pressable accessibilityRole="button" accessibilityLabel="Ordenar pedidos" onPress={()=>setMode('sort')} style={s.filterButton}><StoreIcon name="tune"/></Pressable></View><ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{gap:6}}>{tabs.map(([value,label])=><Pressable key={value} accessibilityRole="tab" accessibilityState={{selected:filter===value}} onPress={()=>setFilter(value)} style={[s.chip,filter===value&&s.active]}><Text style={[s.chipText,filter===value&&{color:c.onPrimary}]}>{label} ({orders.filter(o=>matches(o.status,value)).length})</Text></Pressable>)}</ScrollView>{!!error&&<View style={s.card}><Text style={s.error}>{error}</Text><CheckoutButton label="Tentar novamente" onPress={()=>setRevision(v=>v+1)}/></View>}{loading&&<ActivityIndicator color={c.primary}/>}</View>}
  ListEmptyComponent={!loading&&!error?<Text style={[s.body,{padding:24,textAlign:'center'}]}>{orders.length?'Nenhum pedido corresponde à busca.':'Nenhum pedido registrado.'}</Text>:null}

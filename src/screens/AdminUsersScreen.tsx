@@ -7,7 +7,7 @@ import { ActivityIndicator, FlatList, Image, KeyboardAvoidingView, Modal, Platfo
 import { router, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ProductAction, createPs } from '../components/AdminProductUI';
-import { HeaderAction, StoreIcon } from '../components/StoreHeader';
+import { StoreIcon } from '../components/StoreHeader';
 
 import { useAuth } from '../context/AuthContext';
 import { ManagedUser, UserDraft, UserLog, UserRole, roleLabels } from '../data/users';
@@ -73,9 +73,9 @@ export default function AdminUsersScreen() {
       </View>
     </View>;
   }
-  return <SafeAreaView style={s.safe}>
+  return <SafeAreaView style={s.safe}><AdminThemeToggle/>
     <View style={[ui.header,ui.row,compact&&{flexWrap:'wrap'}]}><View style={ui.icon}><StoreIcon name="shield-account-outline"/></View><View style={[ui.flex,compact&&{minWidth:130}]}><Text style={ui.kicker}>SPEEDZONE HQ</Text><Text style={ui.title}>Usuários &amp; Permissões</Text></View>
-      <AdminThemeToggle inline /><HeaderAction icon="bell-outline" label="Avisos de contas" count={users.filter(user => user.blocked || user.archived).length} onPress={()=>setAlerts(!alerts)} />
+      <Pressable accessibilityRole="button" accessibilityLabel="Avisos de contas" onPress={()=>setAlerts(!alerts)} style={ui.tool}><StoreIcon name="bell-outline" color={c.text} size={18}/></Pressable>
       <Pressable accessibilityRole="button" onPress={()=>open(null,'new')} style={[ui.primary,ui.row]}><StoreIcon name="plus" color={c.onPrimary} size={16}/><Text style={ui.primaryText}>Convidar</Text></Pressable>
     </View>
     <FlatList data={visible} keyExtractor={u=>u.id} renderItem={renderUser} refreshing={loading} onRefresh={()=>setRevision(v=>v+1)} contentContainerStyle={ui.content}

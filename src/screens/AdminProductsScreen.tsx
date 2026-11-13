@@ -1,5 +1,5 @@
 import { AdminThemeToggle } from '../components/AdminThemeToggle';
-import { HeaderAction, StoreIcon } from '../components/StoreHeader';
+import { StoreIcon } from '../components/StoreHeader';
 import { PilotAvatar } from '../components/PilotAvatar';
 import { AdminNavigation } from '../components/AdminNavigation';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -44,10 +44,10 @@ export default function AdminProductsScreen() {
     }
   }
   async function archive() { if (!selected || busy) return; setBusy(true); try { await productRequest('/admin/products/' + selected.id, 'PATCH', { revision: selected.revision, archived: true }); setSelected(null); setRevision(v => v + 1); await refresh(); } catch (e) { setError((e as Error).message); } finally { setBusy(false); } }
-  return <SafeAreaView style={s.safe}>
+  return <SafeAreaView style={s.safe}><AdminThemeToggle/>
     <View style={ui.header}><View style={ui.brand}><StoreIcon name="tune" color={c.onPrimary} size={20}/></View>
       <View style={s.flex}><Text style={s.eyebrow}>SPEEDZONE OPS</Text><Text style={ui.title}>Catálogo &amp; Estoque Admin</Text></View>
-      <AdminThemeToggle inline /><HeaderAction icon="bell-outline" label="Ver alertas de reposição" count={items.filter(product => matches(product, 'Estoque crítico')).length} onPress={()=>{setQuery('');setFilter('Estoque crítico');setFiltersOpen(true);}} /><PilotAvatar size={32}/>
+      <Pressable accessibilityRole="button" accessibilityLabel="Ver alertas de reposição" style={ui.icon} onPress={()=>{setQuery('');setFilter('Estoque crítico');setFiltersOpen(true);}}><StoreIcon name="bell-outline" color={c.text} size={18}/></Pressable><PilotAvatar size={32}/>
     </View>
     <FlatList data={filtered} keyExtractor={p=>p.id} contentContainerStyle={ui.list} refreshing={loading} onRefresh={()=>setRevision(v=>v+1)}
       ListHeaderComponent={<View style={{gap:14}}>

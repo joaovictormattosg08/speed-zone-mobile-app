@@ -8,7 +8,7 @@ import * as Clipboard from 'expo-clipboard';
 import { useAuth } from '../context/AuthContext';
 import { Promotion } from '../data/coupons';
 import { money } from '../data/products';
-import { HeaderAction, StoreIcon } from '../components/StoreHeader';
+import { StoreIcon } from '../components/StoreHeader';
 import { PilotAvatar } from '../components/PilotAvatar';
 import { useTheme, useThemedStyles } from '../theme/ThemeContext';
 import { fonts, ThemeColors } from '../theme/tokens';
@@ -83,9 +83,9 @@ export default function AdminCouponsScreen() {
         <Pressable accessibilityRole="button" accessibilityHint="Mantenha pressionado para duplicar o cupom" onLongPress={()=>edit(p,true)} onPress={()=>edit(p)} style={[s.tool,s.row]}><StoreIcon name={disabled?'restore':'pencil-outline'} size={15} color={c.text}/><Text style={s.strong}>{disabled?'Reativar':'Editar'}</Text></Pressable></View>
     </View>;
   }
-  return <SafeAreaView style={s.safe}>
+  return <SafeAreaView style={s.safe}><AdminThemeToggle/>
     <View style={[s.header,s.row]}><View style={s.mark}><StoreIcon name="ticket-percent-outline"/></View><View style={s.flex}><Text style={s.kicker}>SPEEDZONE NEOBANK</Text><Text style={s.code}>Gestão de Cupons</Text></View>
-      <AdminThemeToggle inline /><HeaderAction icon="bell-outline" label="Avisos de vencimento" count={expiring.length} onPress={()=>setAlerts(!alerts)} />
+      <Pressable accessibilityRole="button" accessibilityLabel="Avisos de vencimento" onPress={()=>setAlerts(!alerts)} style={s.tool}><StoreIcon name="bell-outline" color={c.text}/>{expiring.length>0&&<View style={s.dot}/>}</Pressable>
       <Pressable accessibilityRole="button" accessibilityLabel="Minha conta" onPress={()=>router.navigate('/(main)/account')}><PilotAvatar size={36}/></Pressable></View>
     <FlatList data={visible} keyExtractor={p=>p.code} renderItem={renderCoupon} contentContainerStyle={s.content} refreshing={loading} onRefresh={()=>setRetry(v=>v+1)}
       ListHeaderComponent={<View style={s.stack}>
