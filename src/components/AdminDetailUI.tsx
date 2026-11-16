@@ -5,14 +5,13 @@ import { KeyboardAvoidingView, Platform, ScrollView, Text, View } from 'react-na
 import { Href, router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ProductAction, createPs } from './AdminProductUI';
-import { StoreIcon } from './StoreHeader';
 import { Disclosure } from './Disclosure';
 
 export function AdminDetail({ title, back, children, footer, busy = false }: PropsWithChildren<{ title: string; back: Href; footer?: ReactNode; busy?: boolean }>) {
   const s = useThemedStyles(createPs);
 
-  return <SafeAreaView style={s.safe}><AdminThemeToggle/>
-    <View style={[s.header, { gap: 12 }]}><ProductAction label="←" disabled={busy} onPress={() => router.replace(back)} /><View style={s.flex}><Text style={s.eyebrow}>SPEEDZONE // ADMIN</Text><Text style={s.section}>{title}</Text></View><StoreIcon name="tune-variant" /></View>
+  return <SafeAreaView style={s.safe}>
+    <View style={[s.header, { gap: 12 }]}><ProductAction label="←" disabled={busy} onPress={() => router.replace(back)} /><View style={s.flex}><Text style={s.eyebrow}>SPEEDZONE // ADMIN</Text><Text style={s.section}>{title}</Text></View><AdminThemeToggle/></View>
     <KeyboardAvoidingView style={s.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={s.content}>{children}</ScrollView>
       {footer && <View style={[s.footer, { width: '100%', maxWidth: 760, alignSelf: 'center' }]}>{footer}</View>}

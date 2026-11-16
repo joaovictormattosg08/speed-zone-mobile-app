@@ -91,11 +91,11 @@ export default function AdminProductFormScreen() {
     setPlatform('');
   }
   const margin = price > 0 && Number.isFinite(cost) ? (100*(price-cost)/price).toLocaleString('pt-BR',{maximumFractionDigits:1})+'% Margem' : undefined;
-  return <SafeAreaView style={s.safe}><AdminThemeToggle/>
+  return <SafeAreaView style={s.safe}>
     <View style={local.bar}>
       <Pressable accessibilityRole="button" accessibilityLabel="Voltar para produtos" disabled={busy} onPress={goBack} style={local.back}><Icon name="arrow-left" size={22} color={c.text}/></Pressable>
       <View style={s.flex}><Text style={s.section}>{preview?'Inspecionar peça':id?'Editar peça':'Cadastrar Nova Peça'}</Text><Text style={s.eyebrow}>SPEEDZONE OPS</Text></View>
-      <Text style={local.badge}>SKU Live</Text>
+      <AdminThemeToggle/>
     </View>
     <KeyboardAvoidingView style={s.flex} behavior={Platform.OS==='ios'?'padding':undefined}><ScrollView ref={scroll} keyboardShouldPersistTaps="handled" contentContainerStyle={local.content}>
       <View style={local.row}><View style={s.flex}><Text style={local.kicker}>CATÁLOGO SPEEDZONE</Text><Text style={local.title}>Cadastro de Peça &amp; Telemetria</Text></View><Text style={local.step}>Passo {preview?2:1} de 2</Text></View>

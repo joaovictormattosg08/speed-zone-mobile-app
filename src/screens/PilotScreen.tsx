@@ -83,7 +83,7 @@ export default function PilotScreen() {
   }
   const carSuggestions = editor === 'car' && !vehicleSelected ? searchVehiclePresets(draft.model || '', 8) : [];
   function selectVehicle(vehicle: VehiclePreset) {
-    setDraft(previous => ({ ...previous, model: `${vehicle.brand} ${vehicle.model} ${vehicle.generation}`, engine: vehicle.engine, year: vehicle.years, power: vehicle.stockPower, exhaust: previous.exhaust || 'Original' }));
+    setDraft(previous => ({ ...previous, model: [vehicle.brand, vehicle.model, vehicle.generation].filter(Boolean).join(' '), engine: vehicle.engine, year: vehicle.years, power: vehicle.stockPower, exhaust: previous.exhaust || 'Original' }));
     setVehicleSelected(true);
   }
   function deleteCar(car: PilotCar) {
@@ -153,7 +153,7 @@ export default function PilotScreen() {
             {fields.map(([key, label]) => <View key={key} style={{ gap: 7 }}>
               <Text style={s.fieldLabel}>{label}</Text>
               <TextInput accessibilityLabel={label} value={draft[key] || ''} editable={!busy} onChangeText={value => { setDraft(previous => ({ ...previous, [key]: value })); if (key === 'model') setVehicleSelected(false); }} style={s.input} autoCapitalize={key === 'email' ? 'none' : 'sentences'} keyboardType={key === 'email' ? 'email-address' : key === 'phone' ? 'phone-pad' : ['year', 'power'].includes(key) ? 'numeric' : 'default'} maxLength={key === 'address' ? 300 : 100} multiline={key === 'address'} />
-              {key === 'model' && carSuggestions.length > 0 && <View style={s.suggestions}>{carSuggestions.map(vehicle => <Pressable key={vehicle.id} accessibilityRole="button" accessibilityLabel={`Selecionar ${vehicle.brand} ${vehicle.model} ${vehicle.generation}`} onPress={() => selectVehicle(vehicle)} style={s.suggestion}><View style={s.grow}><Text style={s.suggestionTitle}>{vehicle.brand} {vehicle.model}</Text><Text style={s.secondary}>{vehicle.generation}  {vehicle.years}  {vehicle.engine}</Text></View><Text style={s.powerBadge}>{vehicle.stockPower} CV</Text></Pressable>)}</View>}
+              {key === 'model' && carSuggestions.length > 0 && <View style={s.suggestions}>{carSuggestions.map(vehicle => <Pressable key={vehicle.id} accessibilityRole="button" accessibilityLabel={`Selecionar ${vehicle.brand} ${vehicle.model} ${vehicle.generation}`} onPress={() => selectVehicle(vehicle)} style={s.suggestion}><View style={s.grow}><Text style={s.suggestionTitle}>{vehicle.brand} {vehicle.model}</Text><Text style={s.secondary}>{[vehicle.generation, vehicle.years, vehicle.engine].filter(Boolean).join(' · ')}</Text></View>{!!vehicle.stockPower && <Text style={s.powerBadge}>{vehicle.stockPower} CV</Text>}</Pressable>)}</View>}
             </View>)}
             {error !== '' && <Text accessibilityLiveRegion="polite" style={{ color: c.error }}>{error}</Text>}
           </ScrollView>

@@ -83,9 +83,9 @@ export default function AdminCouponsScreen() {
         <Pressable accessibilityRole="button" accessibilityHint="Mantenha pressionado para duplicar o cupom" onLongPress={()=>edit(p,true)} onPress={()=>edit(p)} style={[s.tool,s.row]}><StoreIcon name={disabled?'restore':'pencil-outline'} size={15} color={c.text}/><Text style={s.strong}>{disabled?'Reativar':'Editar'}</Text></Pressable></View>
     </View>;
   }
-  return <SafeAreaView style={s.safe}><AdminThemeToggle/>
+  return <SafeAreaView style={s.safe}>
     <View style={[s.header,s.row]}><View style={s.mark}><StoreIcon name="ticket-percent-outline"/></View><View style={s.flex}><Text style={s.kicker}>SPEEDZONE NEOBANK</Text><Text style={s.code}>Gestão de Cupons</Text></View>
-      <Pressable accessibilityRole="button" accessibilityLabel="Avisos de vencimento" onPress={()=>setAlerts(!alerts)} style={s.tool}><StoreIcon name="bell-outline" color={c.text}/>{expiring.length>0&&<View style={s.dot}/>}</Pressable>
+      <AdminThemeToggle/><Pressable accessibilityRole="button" accessibilityLabel="Avisos de vencimento" onPress={()=>setAlerts(!alerts)} style={s.tool}><StoreIcon name="information-outline" color={c.text}/>{expiring.length>0&&<View style={s.dot}/>}</Pressable>
       <Pressable accessibilityRole="button" accessibilityLabel="Minha conta" onPress={()=>router.navigate('/(main)/account')}><PilotAvatar size={36}/></Pressable></View>
     <FlatList data={visible} keyExtractor={p=>p.code} renderItem={renderCoupon} contentContainerStyle={s.content} refreshing={loading} onRefresh={()=>setRetry(v=>v+1)}
       ListHeaderComponent={<View style={s.stack}>

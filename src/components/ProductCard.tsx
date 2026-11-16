@@ -14,7 +14,7 @@ export function ProductCard({ product, list = false }: { product: Product; list?
   const open = () => router.push({ pathname: '/product/[id]', params: { id: product.id } });
   return <View style={[s.card, list && s.list]}>
     <Pressable accessibilityRole="button" accessibilityLabel={`Ver foto e detalhes de ${product.name}`} onPress={open} style={[s.media, list && s.listMedia]}>
-      <Image source={product.image} style={s.image} resizeMode="contain" />
+      <Image source={product.image} style={s.image} resizeMode="cover" />
       <View style={s.stage}><Text style={s.stageText}>{product.stage}</Text></View>
     </Pressable>
     <View style={s.details}>
@@ -34,8 +34,9 @@ export function ProductCard({ product, list = false }: { product: Product; list?
 const createStyles = (c: ThemeColors) => StyleSheet.create({
   card: { width: '48%', padding: 12, backgroundColor: c.panel, borderRadius: 24, gap: 12, borderWidth: 1, borderColor: c.surfaceBorder },
   list: { width: '100%', flexDirection: 'row', padding: 16, gap: 16 },
-  media: { width: '100%', aspectRatio: 1, backgroundColor: c.input, borderRadius: 18, overflow: 'hidden', padding: 10 },
-  listMedia: { width: '29%', alignSelf: 'center' }, image: { width: '100%', height: '100%' },
+  media: { width: '100%', aspectRatio: 1, backgroundColor: c.input, borderRadius: 18, overflow: 'hidden' },
+  listMedia: { width: '29%', flexShrink: 0, alignSelf: 'center' },
+  image: { position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' },
   stage: { position: 'absolute', top: 8, left: 8, backgroundColor: c.hero, borderRadius: 8, paddingHorizontal: 6, paddingVertical: 3 }, stageText: { color: c.onHero, fontFamily: fonts.bold, fontSize: 8 },
   details: { flex: 1, justifyContent: 'space-between', gap: 14 }, category: { color: c.primary, fontFamily: fonts.bold, fontSize: 9, letterSpacing: .8, marginBottom: 6 },
   name: { color: c.text, fontFamily: fonts.bold, fontSize: 13, lineHeight: 19 }, fit: { color: c.muted, fontFamily: fonts.regular, fontSize: 11, lineHeight: 16, marginTop: 6 },

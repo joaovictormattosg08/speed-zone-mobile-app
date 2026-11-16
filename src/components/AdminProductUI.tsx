@@ -13,7 +13,7 @@ export function AdminProductShell({ children, footer, title = 'Produtos' }: Prop
 
   const ps = useThemedStyles(createPs);
 
-  return <SafeAreaView style={ps.safe}><AdminThemeToggle/><View style={ps.header}><Text style={ps.logo}>ϟ SPEED<Text style={ps.green}>ZONE</Text></Text><View style={ps.flex}><Text style={ps.eyebrow}>SPEEDZONE OPS</Text><Text style={ps.title}>{title}</Text></View><PilotAvatar /></View>{children}{footer}<AdminNavigation current="/admin-products" onReselect={title === 'Produtos' ? () => router.navigate('/admin-products') : undefined} /></SafeAreaView>;
+  return <SafeAreaView style={ps.safe}><View style={ps.header}><Text style={ps.logo}>ϟ SPEED<Text style={ps.green}>ZONE</Text></Text><View style={ps.flex}><Text style={ps.eyebrow}>SPEEDZONE OPS</Text><Text style={ps.title}>{title}</Text></View><AdminThemeToggle/><PilotAvatar/></View>{children}{footer}<AdminNavigation current="/admin-products" onReselect={title === 'Produtos' ? () => router.navigate('/admin-products') : undefined} /></SafeAreaView>;
 }
 export function ProductAction({ label, onPress, primary = false, danger = false, disabled = false }: { label: string; onPress: () => void; primary?: boolean; danger?: boolean; disabled?: boolean }) {
   const { colors: c } = useTheme();

@@ -81,10 +81,10 @@ export default function AdminCouponFormScreen(){
  function toggle(title:string,detail:string,value:boolean,onChange:(v:boolean)=>void,readonly=false){
    return <View style={ui.row}><View style={s.flex}><Text style={ui.subheading}>{title}</Text><Text style={s.small}>{detail}</Text></View><Switch accessibilityLabel={title} value={value} disabled={busy||readonly} onValueChange={onChange} trackColor={{true:c.action,false:c.border}} thumbColor={value?c.light:c.subtle}/></View>;
  }
- return <SafeAreaView style={s.safe}><AdminThemeToggle/>
+ return <SafeAreaView style={s.safe}>
   <View style={[ui.header,ui.row]}><Pressable accessibilityRole="button" accessibilityLabel="Voltar para cupons" disabled={busy} onPress={()=>router.replace('/admin-coupons')} style={ui.hit}><StoreIcon name="arrow-left" color={c.text}/></Pressable>
     <View style={s.flex}><Text style={s.eyebrow}>SPEEDZONE MARKETING / ADMIN</Text><Text style={ui.heading}>{original?'Editar Cupom de Desconto':'Novo Cupom de Desconto'}</Text></View>
-    <Pressable accessibilityRole="button" accessibilityLabel="Informações sobre publicação" onPress={()=>setInfo(!info)} style={ui.hit}><StoreIcon name="information-outline" color={c.text}/></Pressable><PilotAvatar/></View>
+    <Pressable accessibilityRole="button" accessibilityLabel="Informações sobre publicação" onPress={()=>setInfo(!info)} style={ui.hit}><StoreIcon name="information-outline" color={c.text}/></Pressable><AdminThemeToggle/><PilotAvatar/></View>
   <KeyboardAvoidingView style={s.flex} behavior={Platform.OS==='ios'?'padding':undefined}><ScrollView ref={scroll} keyboardShouldPersistTaps="handled" contentContainerStyle={ui.content}>
    {info&&<Text style={s.body}>Ative o cupom para disponibilizá-lo durante o período escolhido ou salve um rascunho para editar depois.</Text>}
    {!!error&&<View><Text style={s.error} accessibilityRole="alert">{error}</Text>{!loaded&&!loading&&<ProductAction label="Tentar novamente" onPress={()=>{setLoading(true);setRetry(v=>v+1);}}/>}</View>}
