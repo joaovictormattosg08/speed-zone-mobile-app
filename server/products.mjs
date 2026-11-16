@@ -1,3 +1,4 @@
+import { notifyRestock } from './notifications.mjs';
 const seeds = [
   ['SZ-TUR-660-TS', 'Turbocompressor Billet Garrett G25-660 Twin Scroll T4 .82 A/R', 7890, 'Turbo'],
   ['SZ-TUR-042', 'Turbocompressor Garrett GT2871R Ball Bearing', 4850, 'Turbo'],
@@ -46,10 +47,13 @@ export function saveProduct(db, body, id) {
   product.boxInstallation = body.boxInstallation ?? old?.boxInstallation ?? false;
   if (typeof product.manufacturerCode !== 'string' || product.manufacturerCode.length > 200 || typeof product.boxInstallation !== 'boolean') fail('Confira o código do fabricante e a instalação no Box.');
   Object.assign(product, { platforms: body.platforms, images: body.images, published: body.published });
+  db.exec('BEGIN IMMEDIATE');
   try {
     if (old) db.prepare('UPDATE products SET payload = ? WHERE id = ?').run(JSON.stringify(product), id);
     else db.prepare('INSERT INTO products VALUES (?, ?)').run(product.id, JSON.stringify(product));
-  } catch (error) { if (String(error).includes('UNIQUE')) fail('Este SKU já está cadastrado.', 409); throw error; }
+    notifyRestock(db, old, product);
+    db.exec('COMMIT');
+  } catch (error) { db.exec('ROLLBACK'); if (String(error).includes('UNIQUE')) fail('Este SKU já está cadastrado.', 409); throw error; }
   return product;
 }
 // Called within the order transaction so stock and the order commit together.
@@ -59,8 +63,10 @@ export function moveStock(db, items, direction) {
     if (!row) fail('Produto não encontrado.');
     const product = JSON.parse(row.payload);
     if (direction < 0 && (!product.published || product.archived || product.stock < item.quantity)) fail('Estoque insuficiente para ' + product.name);
+    const previous = { ...product };
     product.stock += direction * item.quantity;
     product.revision += 1;
     db.prepare('UPDATE products SET payload = ? WHERE id = ?').run(JSON.stringify(product), item.id);
+    notifyRestock(db, previous, product);
   }
 }

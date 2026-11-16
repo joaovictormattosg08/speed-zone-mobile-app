@@ -31,9 +31,10 @@ export default function HomeScreen({ catalog = false }: { catalog?: boolean }) {
   const [sheet, setSheet] = useState<'garage' | 'filter' | 'package' | null>(null);
   const [sort, setSort] = useState(false);
   const [selectedParts, setSelectedParts] = useState(['Downpipe', 'Intake', 'Remap Stage 2']);
-  const { vehicle } = useStore();
+  const { vehicle, favorites } = useStore();
+  const [favoritesOnly, setFavoritesOnly] = useState(false);
   const activeCategory = category || (catalog ? params.category : '') || '';
-  const filtered = products.filter(p => (!activeCategory || p.category === activeCategory) && (stage === 'TODOS' || p.stage === stage) && `${p.name} ${p.id}`.toLocaleLowerCase('pt-BR').includes(query.toLocaleLowerCase('pt-BR').trim()));
+  const filtered = products.filter(p => (!favoritesOnly || favorites.includes(p.id)) && (!activeCategory || p.category === activeCategory) && (stage === 'TODOS' || p.stage === stage) && `${p.name} ${p.id}`.toLocaleLowerCase('pt-BR').includes(query.toLocaleLowerCase('pt-BR').trim()));
   if (sort) filtered.sort((a, b) => a.price - b.price);
   const power = 230 + selectedParts.reduce((sum, part) => sum + ({ Downpipe: 18, Intake: 10, 'Remap Stage 2': 60 }[part] ?? 0), 0);
   const visibleProducts = !catalog && !query.trim() && !activeCategory && stage === 'TODOS' ? filtered.slice(0, 4) : filtered;
@@ -43,7 +44,7 @@ export default function HomeScreen({ catalog = false }: { catalog?: boolean }) {
     catch (e) { setGarageError((e as Error).message); } finally { setGarageBusy(false); }
   }
   const openCatalog = () => router.navigate('/(main)/catalog');
-  function clear() { setQuery(''); setStage('TODOS'); setCategory(''); if (catalog) router.setParams({ category: '' }); }
+  function clear() { setFavoritesOnly(false); setSort(false); setQuery(''); setStage('TODOS'); setCategory(''); if (catalog) router.setParams({ category: '' }); }
 
   return <SafeAreaView edges={['top', 'left', 'right']} style={s.safe}>
     <StoreHeader title={catalog ? 'Catálogo' : 'Início'} />
@@ -53,6 +54,9 @@ export default function HomeScreen({ catalog = false }: { catalog?: boolean }) {
       <CatalogStatus/>
       <View style={s.searchRow}><View style={s.search}><StoreIcon name="magnify" size={20} color={c.muted} /><TextInput accessibilityLabel="Buscar por peça, nome ou SKU" placeholder="Buscar por peça, nome ou SKU..." placeholderTextColor={c.muted} value={query} onChangeText={setQuery} style={s.searchInput} returnKeyType="search" />{query !== '' && <Pressable accessibilityRole="button" accessibilityLabel="Limpar busca" onPress={() => setQuery('')} style={s.clear}><StoreIcon name="close" size={18} /></Pressable>}</View><Pressable accessibilityRole="button" accessibilityLabel="Filtros de produtos" onPress={() => setSheet('filter')} style={s.filter}><StoreIcon name="tune-variant" /></Pressable></View>
       <Pressable accessibilityRole="button" accessibilityLabel="Trocar veículo da garagem" onPress={() => setSheet('garage')} style={s.garage}><View style={s.dot} /><StoreIcon name="car-sports" size={23} /><Text numberOfLines={1} style={s.vehicle}>{vehicle}</Text><Text style={s.link}>Alterar</Text></Pressable>
+      <View style={[s.chips, { flexDirection: 'row', flexWrap: 'wrap' }]}>
+        <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: favoritesOnly }} onPress={() => setFavoritesOnly(!favoritesOnly)} style={[s.chip, favoritesOnly && s.chipActive]}><Text style={[s.chipText, favoritesOnly && { color: c.onPrimary }]}>♥ Favoritas</Text></Pressable>
+      </View>
       <View style={s.sectionHeading}><View style={s.marker} /><Text style={s.sectionTitle}>Categorias</Text><Text style={s.micro}>{categories.length} LINHAS</Text></View>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.categories}>{categories.map(([name, icon]) => <Pressable key={name} accessibilityRole="button" accessibilityState={{ selected: activeCategory === name }} onPress={() => { setCategory(activeCategory === name ? '' : name); if (catalog) router.setParams({ category: '' }); }} style={[s.category, activeCategory === name && s.categorySelected]}><View style={s.categoryIcon}><StoreIcon name={icon} size={25} /></View><Text style={s.categoryText}>{name}</Text></Pressable>)}</ScrollView>
       <View style={s.sectionHeading}><View style={[s.marker, { backgroundColor: speedPalette.speedGreen }]} /><Text style={s.sectionTitle}>Por estágio</Text><Pressable accessibilityRole="button" onPress={clear} style={s.smallAction}><Text style={s.link}>Ver Todos</Text></Pressable></View>
@@ -60,7 +64,7 @@ export default function HomeScreen({ catalog = false }: { catalog?: boolean }) {
       <View style={s.sectionHeading}><View style={[s.marker, { backgroundColor: '#ffb95f' }]} /><Text style={s.sectionTitle}>{catalog ? 'Catálogo de Performance' : 'Peças em destaque'}</Text><Text style={s.micro}>{filtered.length} PEÇAS</Text></View>
       {activeCategory !== '' && <Pressable accessibilityRole="button" onPress={clear} style={s.selectedFilter}><Text style={s.link}>{activeCategory} · Limpar filtro</Text><StoreIcon name="close" size={16} /></Pressable>}
       <View style={s.grid}>{visibleProducts.map(product => <ProductCard key={product.id} product={product} list={catalog} />)}</View>
-      {!catalogLoading && !catalogError && filtered.length === 0 && <View style={s.empty}><StoreIcon name="magnify" size={32} /><Text style={s.sectionTitle}>Nenhuma peça encontrada</Text><Text style={s.body}>Experimente outra busca ou categoria.</Text><Pressable accessibilityRole="button" onPress={clear} style={s.smallAction}><Text style={s.link}>Limpar filtros</Text></Pressable></View>}
+      {!catalogLoading && !catalogError && filtered.length === 0 && <View style={s.empty}><StoreIcon name="magnify" size={32} /><Text style={s.sectionTitle}>Nenhuma peça encontrada</Text><Text style={s.body}>Experimente outra busca ou ajuste os filtros selecionados.</Text><Pressable accessibilityRole="button" onPress={clear} style={s.smallAction}><Text style={s.link}>Limpar filtros</Text></Pressable></View>}
       {!catalog && <>
         <Pressable accessibilityRole="button" onPress={openCatalog} style={[s.configure, s.catalogButton]}><Text style={s.link}>Ver catálogo completo →</Text></Pressable>
         <Disclosure title="Simular ganho de potência">

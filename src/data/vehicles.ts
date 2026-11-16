@@ -109,6 +109,18 @@ const detailedPresets: VehiclePreset[] = [
 // NHTSA vPIC model-year records. These entries do not include trim specifications.
 export const vehiclePresets = [
   ...detailedPresets,
+  // Brazilian-market models missing from vPIC. Generic applications: fill in engine and power for the actual trim.
+  // https://www.hyundai.com.br/content/dam/hmb/ibama/tabela_ruido_estatico-site_HMB.pdf
+  // https://media.toyota.com.br/b78fafa9-80f6-4a16-90f6-99e31640f403.pdf
+  ...group('Toyota', [
+    ['Hilux', '', '2005–2026', '', ''],
+    ['SW4', '', '2005–2026', '', ''],
+  ]),
+  ...group('Hyundai', [
+    ['HB20', '', '2013–2026', '', ''],
+    ['HB20S', '', '2013–2026', '', ''],
+    ['Creta', '', '2017–2026', '', ''],
+  ]),
   ...Object.entries(modelYears).flatMap(([brand, rows]) =>
     group(brand, rows.map(([model, year]) => [String(model), '', String(year), '', ''])),
   ),

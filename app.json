@@ -31,7 +31,7 @@
         "expo-image-picker",
         {
           "photosPermission": "Autorize a SpeedZone a selecionar sua foto de perfil.",
-          "cameraPermission": false,
+          "cameraPermission": "Autorize a SpeedZone a tirar fotos de perfil e anexar imagens ao suporte.",
           "microphonePermission": false
         }
       ]

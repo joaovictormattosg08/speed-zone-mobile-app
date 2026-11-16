@@ -6,7 +6,8 @@ import { useLoyalty } from '../hooks/useLoyalty';
 import { useState } from 'react';
 import { Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import * as ImagePicker from 'expo-image-picker';
+import { pickImage } from '../utils/pickImage';
+import { PhotoSourcePicker } from '../components/PhotoSourcePicker';
 import { router } from 'expo-router';
 import { PilotCar, useAuth } from '../context/AuthContext';
 import { useStore } from '../context/StoreContext';
@@ -28,6 +29,8 @@ export default function PilotScreen() {
   const [busy, setBusy] = useState(false);
   const [feedback, setFeedback] = useState('');
   const [error, setError] = useState('');
+  const [photoSources, setPhotoSources] = useState(false);
+  const [pickerBusy, setPickerBusy] = useState(false);
   const [vehicleSelected, setVehicleSelected] = useState(false);
   const [editingCarId, setEditingCarId] = useState<string | null>(null);
   const [garagePage, setGaragePage] = useState(0);
@@ -46,12 +49,12 @@ export default function PilotScreen() {
     catch (cause) { setError((cause as Error).message); }
     finally { setBusy(false); }
   }
-  async function pickPhoto() {
+  async function pickPhoto(source: 'camera' | 'library') {
     // Invoke directly from the press event so browsers can open the file chooser.
-    if (busy) return;
-    setError('');
+    if (busy || pickerBusy) return;
+    setError(''); setPickerBusy(true);
     try {
-      const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, aspect: [1, 1], quality: 0.8, base64: true });
+      const result = await pickImage(source, true);
       if (result.canceled) return;
       const photo = result.assets[0];
       if (!photo.base64) throw new Error('Não foi possível ler a foto. Escolha outro arquivo.');
@@ -60,7 +63,7 @@ export default function PilotScreen() {
       const mime = photo.base64.startsWith('/9j/') ? 'image/jpeg' : photo.base64.startsWith('iVBORw0KGgo') ? 'image/png' : photo.base64.startsWith('UklGR') ? 'image/webp' : photo.mimeType;
       if (!mime || !['image/png', 'image/jpeg', 'image/webp'].includes(mime)) throw new Error('Escolha uma foto PNG, JPEG ou WebP.');
       await action(() => update({ photo: `data:${mime};base64,${photo.base64}` }), 'Foto de perfil atualizada.');
-    } catch (cause) { setError((cause as Error).message); }
+    } catch (cause) { setError((cause as Error).message); } finally { setPickerBusy(false); }
   }
   async function save() {
     if (!user) return;
@@ -121,10 +124,11 @@ export default function PilotScreen() {
     <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
       <View style={s.profile}>
         <View style={s.row}>
-          <Pressable accessibilityRole="button" accessibilityLabel="Alterar foto de perfil" disabled={busy} onPress={pickPhoto} style={s.photo}><PilotAvatar size={82} /><View style={s.camera}><StoreIcon name="camera-plus-outline" size={17} color={c.onPrimary} /></View></Pressable>
+          <Pressable accessibilityRole="button" accessibilityLabel="Alterar foto de perfil" disabled={busy} onPress={() => setPhotoSources(!photoSources)} style={s.photo}><PilotAvatar size={82} /><View style={s.camera}><StoreIcon name="camera-plus-outline" size={17} color={c.onPrimary} /></View></Pressable>
           <View style={s.grow}><View style={s.badge}><StoreIcon name="speedometer" size={13} /><Text style={s.badgeText}>PILOTO SPEEDZONE • DEMO</Text></View><Text style={s.name}>{user.name} {user.surname}</Text><Text style={s.secondary}>{user.email}</Text><View style={[s.row, { gap: 5, marginTop: 8 }]}><StoreIcon name="phone-outline" size={14} color={c.subtle} /><Text style={s.secondary}>{user.phone || 'Adicione seu telefone'}</Text></View></View>
         </View>
-        <View style={s.photoActions}><Pressable accessibilityRole="button" accessibilityLabel="Escolher foto do computador" disabled={busy} onPress={pickPhoto} style={s.textButton}><Text style={s.link}>{busy ? 'Salvando...' : 'Escolher foto'}</Text></Pressable>{user.photo && <Pressable accessibilityRole="button" disabled={busy} onPress={() => action(() => update({ photo: null }), 'Foto removida.')} style={s.textButton}><Text style={s.subtle}>Remover foto</Text></Pressable>}<Text style={s.tiny}>PNG, JPG ou WebP • até 5 MB</Text></View>
+        {photoSources && <PhotoSourcePicker disabled={busy || pickerBusy} onSelect={source => void pickPhoto(source)} />}
+        <View style={s.photoActions}><Pressable accessibilityRole="button" accessibilityLabel="Escolher origem da foto" disabled={busy} onPress={() => setPhotoSources(!photoSources)} style={s.textButton}><Text style={s.link}>{busy ? 'Salvando...' : 'Escolher foto'}</Text></Pressable>{user.photo && <Pressable accessibilityRole="button" disabled={busy} onPress={() => action(() => update({ photo: null }), 'Foto removida.')} style={s.textButton}><Text style={s.subtle}>Remover foto</Text></Pressable>}<Text style={s.tiny}>PNG, JPG ou WebP • até 5 MB</Text></View>
         <Pressable accessibilityRole="button" disabled={busy} onPress={() => openEditor('profile')} style={s.button}><StoreIcon name="account-edit-outline" size={18} /><Text style={s.buttonText}>Editar Dados Pessoais</Text></Pressable>
       </View>
       {(error || feedback) !== '' && <Text accessibilityLiveRegion="polite" style={[s.feedback, error ? { color: c.error } : undefined]}>{error || feedback}</Text>}

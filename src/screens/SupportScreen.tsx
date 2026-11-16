@@ -1,3 +1,4 @@
+import { NotificationBell } from '../components/NotificationBell';
 import { ThemeColors , fonts as f } from '../theme/tokens';
 import { useTheme, useThemedStyles } from '../theme/ThemeContext';
 
@@ -5,7 +6,8 @@ import { useCallback, useRef, useState } from 'react';
 import { ActivityIndicator, Image, KeyboardAvoidingView, Linking, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useFocusEffect } from 'expo-router';
-import * as ImagePicker from 'expo-image-picker';
+import { pickImage } from '../utils/pickImage';
+import { PhotoSourcePicker } from '../components/PhotoSourcePicker';
 import { useAuth } from '../context/AuthContext';
 import { SupportCategory, SupportTicket, supportCategories, supportFaq } from '../data/support';
 import { StoreIcon } from '../components/StoreHeader';
@@ -26,6 +28,7 @@ export default function SupportScreen({ orderId }: { orderId?: string }) {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const [error, setError] = useState('');
+  const [photoSources, setPhotoSources] = useState(false);
   const [busy, setBusy] = useState(false);
   const [pickerBusy, setPickerBusy] = useState(false);
   const [dialog, setDialog] = useState<'category' | 'vehicle' | 'warranty' | null>(null);
@@ -45,11 +48,11 @@ export default function SupportScreen({ orderId }: { orderId?: string }) {
     try { await Linking.openURL(`https://wa.me/5541999627476?text=${message}`); }
     catch { setError('Não foi possível abrir o WhatsApp neste dispositivo.'); }
   }
-  async function selectImage() {
+  async function selectImage(source: 'camera' | 'library') {
     if (busy || pickerBusy) return;
     setError(''); setPickerBusy(true);
     try {
-      const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], base64: true, quality: 0.8 });
+      const result = await pickImage(source);
       if (result.canceled) return;
       const asset = result.assets[0]; const base64 = asset.base64;
       if (!base64 || (asset.fileSize || base64.length * 0.75) > 5 * 1024 * 1024) throw new Error('Escolha uma imagem de até 5 MB.');
@@ -78,7 +81,7 @@ export default function SupportScreen({ orderId }: { orderId?: string }) {
   const activeTickets = tickets.filter(ticket => ticket.status === 'open');
   const sortedTickets = [...tickets].sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt));
   const visibleTickets = showHistory ? sortedTickets : sortedTickets.slice(0, 1);
-  return <SafeAreaView edges={['top', 'left', 'right']} style={s.safe}><View style={s.header}><Pressable accessibilityRole="button" accessibilityLabel="Voltar para Conta" onPress={() => router.canGoBack() ? router.back() : router.replace('/(main)/account')} style={s.icon}><StoreIcon name="arrow-left" color={c.text} /></Pressable><View style={s.grow}><Text style={s.section}>Central de Atendimento</Text><Text style={s.small}>SpeedZone Box</Text></View><StoreIcon name="headset" color={c.primary} /></View>
+  return <SafeAreaView edges={['top', 'left', 'right']} style={s.safe}><View style={s.header}><Pressable accessibilityRole="button" accessibilityLabel="Voltar para Conta" onPress={() => router.canGoBack() ? router.back() : router.replace('/(main)/account')} style={s.icon}><StoreIcon name="arrow-left" color={c.text} /></Pressable><View style={s.grow}><Text style={s.section}>Central de Atendimento</Text><Text style={s.small}>SpeedZone Box</Text></View><NotificationBell /></View>
   <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}><ScrollView ref={scroll} keyboardShouldPersistTaps="handled" contentContainerStyle={s.content}>
     <View><Text style={s.title}>Suporte Técnico &amp; Box</Text><Text style={s.body}>Assistência técnica especializada para pilotos SpeedZone.</Text></View>
     <View style={s.card}>
@@ -113,7 +116,7 @@ export default function SupportScreen({ orderId }: { orderId?: string }) {
       <Text style={s.label}>Tipo de Solicitação / Categoria</Text><Pressable accessibilityRole="button" accessibilityLabel="Selecionar categoria do chamado" disabled={busy} onPress={() => setDialog('category')} style={[s.input, s.row]}><Text style={[s.body, s.grow]}>{supportCategories.find(item => item.id === category)?.label}</Text><StoreIcon name="chevron-down" color={c.muted} size={18} /></Pressable>
       <Text style={s.label}>Veículo / Projeto Vinculado</Text><Pressable accessibilityRole="button" accessibilityLabel="Alterar veículo do chamado" disabled={busy} onPress={() => setDialog('vehicle')} style={[s.input, s.row]}><StoreIcon name="car-outline" size={20} /><Text style={[s.body, s.grow]}>{vehicle?.model || 'Sem veículo vinculado'}</Text><Text style={s.micro}>ALTERAR</Text></Pressable>
       <View style={s.between}><Text style={[s.label, s.grow]}>Descrição Técnica do Sintoma ou Dúvida</Text><Text style={s.micro}>{description.length}/4000</Text></View><TextInput accessibilityLabel="Descrição técnica" value={description} onChangeText={setDescription} editable={!busy} multiline maxLength={4000} placeholder="Descreva o sintoma, a peça, as modificações do veículo e sua dúvida..." placeholderTextColor={c.subtle} style={[s.input, s.textarea]} />
-      <Text style={s.label}>Evidências Mecânicas</Text><Pressable accessibilityRole="button" disabled={busy || pickerBusy} onPress={selectImage} style={s.button}><StoreIcon name="camera-plus-outline" size={20} /><Text style={s.buttonText}>{pickerBusy ? 'Lendo imagem...' : attachment ? 'Trocar imagem anexada' : 'Anexar foto ou diagrama (opcional)'}</Text></Pressable><Text style={s.small}>PNG, JPEG ou WebP • até 5 MB • uma imagem por chamado</Text>{attachment && <View style={{ gap: 8 }}><Image accessibilityLabel="Prévia da evidência" source={{ uri: attachment }} resizeMode="contain" style={s.evidence} /><Pressable accessibilityRole="button" disabled={busy} onPress={() => setAttachment(null)} style={s.button}><Text style={s.buttonText}>Remover anexo</Text></Pressable></View>}
+      <Text style={s.label}>Evidências Mecânicas</Text><Pressable accessibilityRole="button" disabled={busy || pickerBusy} onPress={() => setPhotoSources(!photoSources)} style={s.button}><StoreIcon name="camera-plus-outline" size={20} /><Text style={s.buttonText}>{pickerBusy ? 'Lendo imagem...' : attachment ? 'Trocar imagem anexada' : 'Anexar foto ou diagrama (opcional)'}</Text></Pressable>{photoSources && <PhotoSourcePicker disabled={busy || pickerBusy} onSelect={source => void selectImage(source)} />}<Text style={s.small}>PNG, JPEG ou WebP • até 5 MB • uma imagem por chamado</Text>{attachment && <View style={{ gap: 8 }}><Image accessibilityLabel="Prévia da evidência" source={{ uri: attachment }} resizeMode="contain" style={s.evidence} /><Pressable accessibilityRole="button" disabled={busy} onPress={() => setAttachment(null)} style={s.button}><Text style={s.buttonText}>Remover anexo</Text></Pressable></View>}
       {error !== '' && <Text accessibilityLiveRegion="polite" style={s.error}>{error}</Text>}<Pressable accessibilityRole="button" accessibilityLabel="Registrar chamado técnico" disabled={busy || pickerBusy} onPress={() => void submit()} style={[s.button, s.primary, (busy || pickerBusy) && { opacity: 0.5 }]}><StoreIcon name="send-outline" color={c.onPrimary} size={20} /><Text style={s.primaryText}>{busy ? 'Salvando chamado...' : 'Registrar Solicitação Técnica'}</Text></Pressable><Text style={s.small}>Registro local. Nenhuma mensagem é enviada por WhatsApp ou e-mail.</Text>
       </View>}
     </View>

@@ -1,3 +1,4 @@
+import { setupNotifications, syncNotifications, readNotifications } from './notifications.mjs';
 import { couponMetrics, setupCoupons, listCoupons, saveCoupon, customerCoupons } from './coupons.mjs';
 import { setupUsers, listUsers, createUser, updateUser, userLogs, canSupport, restricted } from './users.mjs';
 import { listProducts, saveProduct, setupProducts } from './products.mjs';
@@ -40,6 +41,7 @@ export function createApi({ database = resolve('server/data/speedzone.sqlite') }
   setupProducts(db);
   setupUsers(db);
   setupCoupons(db);
+  setupNotifications(db);
   const attempts = new Map();
   const publicUser = row => ({ ...JSON.parse(row.profile), id: row.id, email: row.email, isAdmin: isAdmin(db, row.id), canSupport: canSupport(db,row.id) });
   const server = createServer(async (req, res) => {
@@ -55,7 +57,7 @@ export function createApi({ database = resolve('server/data/speedzone.sqlite') }
       if (allowed) { res.setHeader('Access-Control-Allow-Origin', origin); res.setHeader('Vary', 'Origin'); res.setHeader('Access-Control-Allow-Credentials', 'true'); }
       if (req.method === 'OPTIONS') { res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PATCH, OPTIONS'); res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, ngrok-skip-browser-warning'); res.writeHead(204); res.end(); return; }
       const path = req.url?.split('?')[0];
-      if (path === '/health') return send({ ok: true });
+      if (path === '/health') return send({ ok: true, features: { notifications: true } });
       if (path === '/products' && req.method === 'GET') return send({ products: listProducts(db) });
       let body = {};
       if (['POST', 'PATCH'].includes(req.method)) {
@@ -107,6 +109,8 @@ export function createApi({ database = resolve('server/data/speedzone.sqlite') }
       const row = db.prepare('SELECT users.* FROM sessions JOIN users ON users.id = sessions.user_id WHERE sessions.hash = ? AND expires > ?').get(digest(token), Date.now());
       if (!row) fail('Entre na sua conta para continuar.', 401);
       if (restricted(db,row.id)) fail('Conta indisponível. Entre novamente.',401);
+      if (path === '/notifications/sync' && req.method === 'POST') return send({ notifications: syncNotifications(db, row.id, body.favorites) });
+      if (path === '/notifications/read' && req.method === 'POST') { readNotifications(db, row.id, body.id); return send({ ok: true }); }
       if (path === '/coupons' && req.method === 'GET') return send({ coupons:customerCoupons(db,row.id) });
       if (path?.startsWith('/admin')) {
         const supportRoute = path === '/admin/support' || path.startsWith('/admin/support/');
