@@ -1,3 +1,4 @@
+import { notificationDevice } from '../utils/notificationDevice';
 import type { CustomerNotification } from './NotificationContext';
 import Constants from 'expo-constants';
 import { CouponBenefit, Promotion, PromotionDraft } from '../data/coupons';
@@ -45,7 +46,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     }
     return data;
   }, []);
-  const syncNotifications = useCallback(async (favorites: string[]): Promise<CustomerNotification[]> => (await request('/notifications/sync', 'POST', { favorites })).notifications, [request]);
+  const syncNotifications = useCallback(async (favorites: string[]): Promise<CustomerNotification[]> => (await request('/notifications/sync', 'POST', { favorites, deviceId: await notificationDevice() })).notifications, [request]);
   const readNotification = useCallback(async (id: string): Promise<void> => { await request('/notifications/read', 'POST', { id }); }, [request]);
   const restore = useCallback(async () => {
     try {

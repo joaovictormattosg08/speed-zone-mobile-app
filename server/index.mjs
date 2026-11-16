@@ -109,7 +109,7 @@ export function createApi({ database = resolve('server/data/speedzone.sqlite') }
       const row = db.prepare('SELECT users.* FROM sessions JOIN users ON users.id = sessions.user_id WHERE sessions.hash = ? AND expires > ?').get(digest(token), Date.now());
       if (!row) fail('Entre na sua conta para continuar.', 401);
       if (restricted(db,row.id)) fail('Conta indisponível. Entre novamente.',401);
-      if (path === '/notifications/sync' && req.method === 'POST') return send({ notifications: syncNotifications(db, row.id, body.favorites) });
+      if (path === '/notifications/sync' && req.method === 'POST') return send({ notifications: syncNotifications(db, row.id, body.favorites, body.deviceId) });
       if (path === '/notifications/read' && req.method === 'POST') { readNotifications(db, row.id, body.id); return send({ ok: true }); }
       if (path === '/coupons' && req.method === 'GET') return send({ coupons:customerCoupons(db,row.id) });
       if (path?.startsWith('/admin')) {

@@ -4,6 +4,14 @@ export function setupNotifications(db) {
   db.exec(`CREATE TABLE IF NOT EXISTS notifications (id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id), title TEXT NOT NULL, target TEXT NOT NULL, created_at TEXT NOT NULL, read INTEGER NOT NULL DEFAULT 0);
     CREATE INDEX IF NOT EXISTS notifications_user ON notifications(user_id, created_at);
     CREATE TABLE IF NOT EXISTS stock_watches (user_id TEXT NOT NULL REFERENCES users(id), product_id TEXT NOT NULL, PRIMARY KEY(user_id, product_id));`);
+  if (!db.prepare('PRAGMA table_info(stock_watches)').all().some(column => column.name === 'device_id')) {
+    db.exec(`BEGIN IMMEDIATE;
+      ALTER TABLE stock_watches RENAME TO stock_watches_legacy;
+      CREATE TABLE stock_watches (user_id TEXT NOT NULL REFERENCES users(id), device_id TEXT NOT NULL, product_id TEXT NOT NULL, PRIMARY KEY(user_id, device_id, product_id));
+      INSERT INTO stock_watches SELECT user_id, 'legacy', product_id FROM stock_watches_legacy;
+      DROP TABLE stock_watches_legacy;
+      COMMIT;`);
+  }
 }
 const insert = (db, id, user, title, target, at) => db.prepare('INSERT OR IGNORE INTO notifications (id, user_id, title, target, created_at) VALUES (?, ?, ?, ?, ?)').run(id, user, title, target, at);
 
@@ -11,17 +19,22 @@ const insert = (db, id, user, title, target, at) => db.prepare('INSERT OR IGNORE
 export function notifyRestock(db, previous, product) {
   if (!previous || previous.stock > 0 || product.stock <= 0 || !product.published || product.archived) return;
   const event = randomUUID();
-  for (const watch of db.prepare('SELECT user_id FROM stock_watches WHERE product_id = ?').all(product.id)) {
+  for (const watch of db.prepare('SELECT DISTINCT user_id FROM stock_watches WHERE product_id = ?').all(product.id)) {
     insert(db, `${event}:${watch.user_id}`, watch.user_id, `${product.name} voltou ao estoque`, `/product/${encodeURIComponent(product.id)}`, new Date().toISOString());
   }
 }
 
-export function syncNotifications(db, userId, favorites) {
+export function syncNotifications(db, userId, favorites, deviceId = 'legacy') {
   if (!Array.isArray(favorites) || favorites.length > 5000 || favorites.some(id => typeof id !== 'string' || id.length > 100)) throw Object.assign(new Error('Favoritos inválidos.'), { status: 400 });
+  if (typeof deviceId !== 'string' || !/^[a-zA-Z0-9_-]{1,100}$/.test(deviceId)) throw Object.assign(new Error('Aparelho inválido.'), { status: 400 });
   db.exec('BEGIN IMMEDIATE');
   try {
-    db.prepare('DELETE FROM stock_watches WHERE user_id = ?').run(userId);
-    for (const id of new Set(favorites)) db.prepare('INSERT INTO stock_watches VALUES (?, ?)').run(userId, id);
+    db.prepare('DELETE FROM stock_watches WHERE user_id = ? AND device_id = ?').run(userId, deviceId);
+    for (const id of new Set(favorites)) {
+      // Transfer pre-upgrade subscriptions only when this device actually has that favorite.
+      if (deviceId !== 'legacy') db.prepare("DELETE FROM stock_watches WHERE user_id = ? AND device_id = 'legacy' AND product_id = ?").run(userId, id);
+      db.prepare('INSERT INTO stock_watches VALUES (?, ?, ?)').run(userId, deviceId, id);
+    }
     const labels = { pending: 'Pendente', confirmed: 'Confirmado', processing: 'Em preparação', transit: 'Enviado', delivered: 'Entregue', cancelled: 'Cancelado' };
     for (const row of db.prepare('SELECT id, payload FROM orders WHERE user_id = ?').all(userId)) {
       const order = JSON.parse(row.payload);
@@ -36,7 +49,7 @@ export function syncNotifications(db, userId, favorites) {
     }
     db.exec('COMMIT');
   } catch (error) { db.exec('ROLLBACK'); throw error; }
-  return db.prepare('SELECT id, title, target, created_at AS createdAt, read FROM notifications WHERE user_id = ? ORDER BY created_at DESC, id DESC LIMIT 200').all(userId).map(item => ({ ...item, read: !!item.read }));
+  return db.prepare('SELECT id, title, target, created_at AS createdAt, read FROM notifications WHERE user_id = ? AND (read = 0 OR id IN (SELECT id FROM notifications WHERE user_id = ? ORDER BY created_at DESC, id DESC LIMIT 200)) ORDER BY created_at DESC, id DESC').all(userId, userId).map(item => ({ ...item, read: !!item.read }));
 }
 
 export function readNotifications(db, userId, id) {
