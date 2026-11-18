@@ -1,3 +1,4 @@
+import { ScreenHeader } from './ScreenHeader';
 import { ThemeColors , fonts as f } from '../theme/tokens';
 import { useTheme, useThemedStyles } from '../theme/ThemeContext';
 
@@ -7,7 +8,7 @@ import { money } from '../data/products';
 export function CheckoutHeader({ title, onBack }: { title: string; onBack: () => void }) {
   const { colors: c } = useTheme();
   const s = useThemedStyles(createCheckoutStyles);
- return <View style={s.header}><Pressable accessibilityRole="button" accessibilityLabel="Voltar" onPress={onBack} style={s.back}><StoreIcon name="arrow-left" color={c.text} /></Pressable><Text style={s.brand}>SPEEDZONE</Text><Text style={[s.title, s.flex]}>{title}</Text></View>; }
+ return <ScreenHeader title={title} leading={<Pressable accessibilityRole="button" accessibilityLabel="Voltar" onPress={onBack} style={s.back}><StoreIcon name="arrow-left" color={c.text} /></Pressable>} />; }
 export function CheckoutButton({ label, onPress, disabled = false }: { label: string; onPress: () => void; disabled?: boolean }) {
   const s = useThemedStyles(createCheckoutStyles);
  return <Pressable accessibilityRole="button" disabled={disabled} onPress={onPress} style={[s.button, disabled && { opacity: 0.5 }]}><Text style={s.buttonText}>{label}</Text></Pressable>; }

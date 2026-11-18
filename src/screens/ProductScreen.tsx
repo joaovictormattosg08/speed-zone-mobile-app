@@ -1,3 +1,4 @@
+import { ScreenHeader } from '../components/ScreenHeader';
 import { ThemeColors , palette as speedPalette, fonts as f } from '../theme/tokens';
 import { useTheme, useThemedStyles } from '../theme/ThemeContext';
 
@@ -84,12 +85,7 @@ export default function ProductScreen({ id }: { id: string }) {
     setCepError(''); setShipping(true);
   }
   return <SafeAreaView edges={['top', 'left', 'right']} style={s.safe}>
-    <View style={s.header}>
-      <Pressable accessibilityRole="button" accessibilityLabel="Voltar" onPress={back} style={s.iconButton}><StoreIcon name="arrow-left" color={c.text} /></Pressable>
-      <View style={s.brand}><StoreIcon name="speedometer" size={20} /><View><Text style={s.brandName}>SPEED<Text style={{ color: c.primary }}>ZONE</Text></Text><Text style={s.brandCaption}>A U T O P A R T S</Text></View></View>
-      <Text numberOfLines={1} style={s.headerTitle}>DETALHES DA PEÇA</Text>
-      <Pressable accessibilityRole="button" accessibilityLabel="Minha conta" onPress={() => router.navigate('/(main)/account')} style={s.iconButton}><PilotAvatar /></Pressable>
-    </View>
+    <ScreenHeader title="Detalhes da peça" leading={<Pressable accessibilityRole="button" accessibilityLabel="Voltar" onPress={back} style={s.iconButton}><StoreIcon name="arrow-left" color={c.text} /></Pressable>}><Pressable accessibilityRole="button" accessibilityLabel="Minha conta" onPress={() => router.navigate('/(main)/account')} style={s.iconButton}><PilotAvatar /></Pressable></ScreenHeader>
     <KeyboardAvoidingView style={s.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={s.scroll}>
         <View style={s.toolbar}><Pressable accessibilityRole="button" onPress={() => router.navigate('/(main)/catalog')} style={s.backCatalog}><StoreIcon name="chevron-left" color={c.primary} size={21} /><Text style={s.catalogText}>Voltar ao Catálogo</Text></Pressable><Pressable accessibilityRole="button" accessibilityLabel="Compartilhar produto" onPress={shareProduct} style={s.toolButton}><StoreIcon name="share-variant-outline" color={c.text} size={20} /></Pressable><Pressable accessibilityRole="button" accessibilityLabel={favorite ? 'Remover dos favoritos' : 'Favoritar produto'} accessibilityState={{ selected: favorite }} onPress={() => toggleFavorite(id)} style={s.toolButton}><StoreIcon name={favorite ? 'heart' : 'heart-outline'} color={favorite ? c.error : c.text} size={21} /></Pressable></View>

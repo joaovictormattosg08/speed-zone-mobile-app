@@ -1,3 +1,4 @@
+import { ScreenHeader } from '../components/ScreenHeader';
 import { useTheme , useThemedStyles } from '../theme/ThemeContext';
 import { fonts, ThemeColors } from '../theme/tokens';
 import { useEffect, useRef, useState } from 'react';
@@ -48,13 +49,9 @@ export default function AdminTicketDetailScreen() {
     catch { setError('Não foi possível compartilhar o protocolo.'); }
   }
   return <SafeAreaView style={s.safe}>
-    <View style={s.header}>
-      <Pressable accessibilityRole="button" accessibilityLabel="Voltar aos chamados" disabled={busy} onPress={() => router.replace('/admin-support')} style={s.icon}><StoreIcon name="chevron-left" color={c.text} size={28} /></Pressable>
-      <View style={s.flex}><Text style={s.label}>CHAMADO TÉCNICO</Text><Text style={s.title}>Detalhes do chamado</Text></View>
-      <Pressable accessibilityRole="button" accessibilityLabel="Compartilhar protocolo" onPress={() => void share()} style={s.icon}><StoreIcon name="share-variant-outline" color={c.muted} /></Pressable>
-      <Pressable accessibilityRole="button" accessibilityLabel="Mais ações" onPress={() => setOptions(true)} style={s.icon}><StoreIcon name="dots-vertical" color={c.muted} /></Pressable>
-      <PilotAvatar size={36} />
-    </View>
+    <ScreenHeader title="Detalhes do chamado" eyebrow="SPEEDZONE ADMIN" leading={<Pressable accessibilityRole="button" accessibilityLabel="Voltar aos chamados" disabled={busy} onPress={() => router.replace('/admin-support')} style={s.icon}><StoreIcon name="chevron-left" color={c.text} size={28} /></Pressable>}><Pressable accessibilityRole="button" accessibilityLabel="Compartilhar protocolo" onPress={() => void share()} style={s.icon}><StoreIcon name="share-variant-outline" color={c.muted} /></Pressable>
+<Pressable accessibilityRole="button" accessibilityLabel="Mais ações" onPress={() => setOptions(true)} style={s.icon}><StoreIcon name="dots-vertical" color={c.muted} /></Pressable>
+<PilotAvatar size={36} /></ScreenHeader>
     <KeyboardAvoidingView style={s.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={s.content}>
         {loading && <ActivityIndicator color={c.primary} />}

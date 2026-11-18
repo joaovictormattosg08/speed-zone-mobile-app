@@ -1,3 +1,4 @@
+import { ScreenHeader } from '../components/ScreenHeader';
 import { ThemeColors, fonts as f } from '../theme/tokens';
 import { useTheme, useThemedStyles } from '../theme/ThemeContext';
 import { DemoInvoice } from '../components/DemoInvoice';
@@ -53,9 +54,7 @@ export default function OrderDetailsScreen({ id, preview }: { id: string; previe
   const headline = exampleDelivery ? 'Chega hoje até às 18h' : order?.status === 'pending' ? 'Pedido Pendente' : order?.status === 'confirmed' ? 'Pedido Confirmado' : cancelled ? 'Pedido Cancelado' : order?.status === 'transit' ? 'Pedido Enviado • Em Transporte' : order?.status === 'delivered' ? 'Entregue no Destino' : 'Pedido Recebido • Em Preparação';
   const created = order ? new Date(order.createdAt).toLocaleString('pt-BR', { day: '2-digit', month: 'long', hour: '2-digit', minute: '2-digit' }) : '';
   return <SafeAreaView edges={['top', 'left', 'right']} style={s.safe}>
-    <View style={s.header}><Pressable accessibilityRole="button" accessibilityLabel="Voltar para pedidos" onPress={back} style={s.icon}><StoreIcon name="arrow-left" color={c.text} /></Pressable><View style={{flex:1}}><Text style={s.title}>Rastreamento</Text><Text style={s.small}>Pedido #{id}</Text></View>
-      {order && <><Pressable accessibilityRole="button" accessibilityLabel="Copiar código do pedido" onPress={copy} style={s.icon}><StoreIcon name="content-copy" color={c.muted} size={19} /></Pressable><Pressable accessibilityRole="button" accessibilityLabel="Compartilhar pedido" onPress={share} style={s.icon}><StoreIcon name="share-variant-outline" color={c.muted} size={20} /></Pressable></>}
-    </View>
+    <ScreenHeader title={`Rastreamento • Pedido #${id}`} leading={<Pressable accessibilityRole="button" accessibilityLabel="Voltar para pedidos" onPress={back} style={s.icon}><StoreIcon name="arrow-left" color={c.text} /></Pressable>}>{order && <><Pressable accessibilityRole="button" accessibilityLabel="Copiar código do pedido" onPress={copy} style={s.icon}><StoreIcon name="content-copy" color={c.muted} size={19} /></Pressable><Pressable accessibilityRole="button" accessibilityLabel="Compartilhar pedido" onPress={share} style={s.icon}><StoreIcon name="share-variant-outline" color={c.muted} size={20} /></Pressable></>}</ScreenHeader>
     <ScrollView contentContainerStyle={s.content}>
       {loading ? <ActivityIndicator color={c.primary} style={{ margin: 40 }} /> : !order ? <View style={s.card}><StoreIcon name="package-variant" size={40} /><Text style={s.title}>{error ? 'Não foi possível carregar' : 'Pedido não encontrado'}</Text><Text style={s.body}>{error || 'Este pedido não está disponível nesta conta.'}</Text><Pressable accessibilityRole="button" onPress={error ? () => setAttempt(value => value + 1) : back} style={s.button}><Text style={s.buttonText}>{error ? 'Tentar novamente' : 'Meus Pedidos'}</Text></Pressable></View> : <>
       {notice !== '' && <Text accessibilityLiveRegion="polite" style={s.green}>{notice}</Text>}

@@ -70,6 +70,8 @@ export default function PilotScreen() {
     await action(async () => {
       if (editor === 'car') {
         if (!draft.model?.trim()) throw new Error('Informe o modelo do carro.');
+        const savedYear = user.cars.find(item => item.id === editingCarId)?.year;
+        if (draft.year && draft.year !== savedYear && !/^\d{4}$/.test(draft.year)) throw new Error('Informe o ano com 4 dígitos, por exemplo 2020.');
         const car: PilotCar = { ...blankCar, ...draft, id: editingCarId || `${Date.now()}-${Math.random().toString(36).slice(2, 10)}` };
         if (editingCarId) {
           await update({ cars: user.cars.map(item => item.id === editingCarId ? car : item) });
@@ -86,7 +88,7 @@ export default function PilotScreen() {
   }
   const carSuggestions = editor === 'car' && !vehicleSelected ? searchVehiclePresets(draft.model || '', 8) : [];
   function selectVehicle(vehicle: VehiclePreset) {
-    setDraft(previous => ({ ...previous, model: [vehicle.brand, vehicle.model, vehicle.generation].filter(Boolean).join(' '), engine: vehicle.engine, year: vehicle.years, power: vehicle.stockPower, exhaust: previous.exhaust || 'Original' }));
+    setDraft(previous => ({ ...previous, model: [vehicle.brand, vehicle.model, vehicle.generation].filter(Boolean).join(' '), engine: vehicle.engine, power: vehicle.stockPower, exhaust: previous.exhaust || 'Original' }));
     setVehicleSelected(true);
   }
   function deleteCar(car: PilotCar) {
@@ -115,7 +117,7 @@ export default function PilotScreen() {
     { icon: 'shield-half-full' as const, title: 'Política de Privacidade', description: 'Seus dados e suas solicitações', onPress: () => router.push('/privacy'), color: c.muted },
     { icon: 'information-outline' as const, title: 'Sobre a SpeedZone', description: 'Conheça o app e esta versão', onPress: () => router.push('/about'), color: c.muted },
   ];
-  const fields = editor === 'profile' ? [['name', 'Nome'], ['surname', 'Sobrenome'], ['email', 'E-mail'], ['phone', 'Telefone (opcional)']] : editor === 'address' ? [['address', 'Endereço completo']] : [['model', 'Modelo do carro *'], ['engine', 'Motorização'], ['year', 'Ano'], ['color', 'Cor'], ['power', 'Potência (CV)'], ['exhaust', 'Escape']];
+  const fields = editor === 'profile' ? [['name', 'Nome'], ['surname', 'Sobrenome'], ['email', 'E-mail'], ['phone', 'Telefone (opcional)']] : editor === 'address' ? [['address', 'Endereço completo']] : [['model', 'Modelo do carro *'], ['year', 'Ano do carro'], ['engine', 'Motorização'], ['color', 'Cor'], ['power', 'Potência (CV)'], ['exhaust', 'Escape']];
   const garagePages = Math.max(1, Math.ceil(user.cars.length / 3));
   const currentGaragePage = Math.min(garagePage, garagePages - 1);
   const visibleCars = user.cars.slice(currentGaragePage * 3, currentGaragePage * 3 + 3);
@@ -153,11 +155,11 @@ export default function PilotScreen() {
         <View style={s.dialog}>
           <View style={s.sectionHeading}><Text style={s.dialogTitle}>{editor === 'profile' ? 'Dados do Piloto' : editor === 'car' ? editingCarId ? 'Editar carro' : 'Novo projeto' : 'Endereço de Entrega'}</Text><Pressable accessibilityRole="button" accessibilityLabel="Fechar edição" disabled={busy} onPress={() => setEditor(null)} style={s.close}><StoreIcon name="close" color={c.muted} /></Pressable></View>
           <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ gap: 14, paddingBottom: 12 }}>
-            {editor === 'car' && <View style={s.catalogHint}><StoreIcon name="auto-fix" size={19} color={c.primary}/><View style={s.grow}><Text style={s.fieldLabel}>GARAGEM INTELIGENTE</Text><Text style={s.secondary}>Digite marca, modelo ou geração. Escolha uma versão para preencher os dados originais.</Text></View></View>}
+            {editor === 'car' && <View style={s.catalogHint}><StoreIcon name="auto-fix" size={19} color={c.primary}/><View style={s.grow}><Text style={s.fieldLabel}>GARAGEM INTELIGENTE</Text><Text style={s.secondary}>Escolha a marca e o modelo. Depois, digite o ano do seu carro no campo abaixo.</Text></View></View>}
             {fields.map(([key, label]) => <View key={key} style={{ gap: 7 }}>
               <Text style={s.fieldLabel}>{label}</Text>
-              <TextInput accessibilityLabel={label} value={draft[key] || ''} editable={!busy} onChangeText={value => { setDraft(previous => ({ ...previous, [key]: value })); if (key === 'model') setVehicleSelected(false); }} style={s.input} autoCapitalize={key === 'email' ? 'none' : 'sentences'} keyboardType={key === 'email' ? 'email-address' : key === 'phone' ? 'phone-pad' : ['year', 'power'].includes(key) ? 'numeric' : 'default'} maxLength={key === 'address' ? 300 : 100} multiline={key === 'address'} />
-              {key === 'model' && carSuggestions.length > 0 && <View style={s.suggestions}>{carSuggestions.map(vehicle => <Pressable key={vehicle.id} accessibilityRole="button" accessibilityLabel={`Selecionar ${vehicle.brand} ${vehicle.model} ${vehicle.generation}`} onPress={() => selectVehicle(vehicle)} style={s.suggestion}><View style={s.grow}><Text style={s.suggestionTitle}>{vehicle.brand} {vehicle.model}</Text><Text style={s.secondary}>{[vehicle.generation, vehicle.years, vehicle.engine].filter(Boolean).join(' · ')}</Text></View>{!!vehicle.stockPower && <Text style={s.powerBadge}>{vehicle.stockPower} CV</Text>}</Pressable>)}</View>}
+              <TextInput accessibilityLabel={label} value={draft[key] || ''} editable={!busy} onChangeText={value => { setDraft(previous => ({ ...previous, [key]: key === 'year' ? value.replace(/\D/g, '').slice(0, 4) : value })); if (key === 'model') setVehicleSelected(false); }} style={s.input} autoCapitalize={key === 'email' ? 'none' : 'sentences'} keyboardType={key === 'email' ? 'email-address' : key === 'phone' ? 'phone-pad' : ['year', 'power'].includes(key) ? 'numeric' : 'default'} placeholder={key === 'year' ? 'Ex.: 2020' : undefined} placeholderTextColor={c.subtle} maxLength={key === 'year' ? 4 : key === 'address' ? 300 : 100} multiline={key === 'address'} />
+              {key === 'model' && carSuggestions.length > 0 && <View style={s.suggestions}>{carSuggestions.map(vehicle => <Pressable key={vehicle.id} accessibilityRole="button" accessibilityLabel={`Selecionar ${vehicle.brand} ${vehicle.model} ${vehicle.generation}`} onPress={() => selectVehicle(vehicle)} style={s.suggestion}><View style={s.grow}><Text style={s.suggestionTitle}>{vehicle.brand} {vehicle.model}</Text><Text style={s.secondary}>{vehicle.engine || 'Informe o ano e a motorização abaixo'}</Text></View>{!!vehicle.stockPower && <Text style={s.powerBadge}>{vehicle.stockPower} CV</Text>}</Pressable>)}</View>}
             </View>)}
             {error !== '' && <Text accessibilityLiveRegion="polite" style={{ color: c.error }}>{error}</Text>}
           </ScrollView>

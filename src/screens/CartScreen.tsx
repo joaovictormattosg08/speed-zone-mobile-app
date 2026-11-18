@@ -55,9 +55,9 @@ export default function CartScreen() {
     setCoupon(null); setError('');
   }
   const browse = () => router.navigate('/(main)/catalog');
-  if (catalogLoading) return <SafeAreaView style={s.safe}><StoreHeader title="CARRINHO"/><CatalogStatus/></SafeAreaView>;
+  if (catalogLoading) return <SafeAreaView style={s.safe}><StoreHeader title="Carrinho"/><CatalogStatus/></SafeAreaView>;
   return <SafeAreaView edges={['top', 'left', 'right']} style={s.safe}>
-    <StoreHeader title="CARRINHO" />
+    <StoreHeader title="Carrinho" />
     <View style={s.status}><View style={s.inline}><View style={s.dot} /><Text style={s.statusText}>GARAGEM • PEDIDO ATIVO</Text></View><View style={s.secure}><StoreIcon name="shield-check-outline" color={c.primary} size={13} /><Text style={s.secureText}>CHECKOUT DEMO</Text></View></View>
     <KeyboardAvoidingView style={s.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>

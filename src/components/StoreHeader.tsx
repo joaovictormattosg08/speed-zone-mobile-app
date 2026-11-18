@@ -1,3 +1,4 @@
+import { ScreenHeader } from './ScreenHeader';
 import { NotificationBell } from './NotificationBell';
 import { ComponentProps } from 'react';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
@@ -15,13 +16,11 @@ export function StoreHeader({ title = 'Início' }: { title?: string }) {
   const { count } = useStore();
   const { colors, mode, setPreference } = useTheme();
   const s = useThemedStyles(createStyles);
-  return <View style={s.header}><View style={s.inner}>
-    <View style={s.mark}><StoreIcon name="lightning-bolt-circle" size={27} color={colors.hero} /></View>
-    <View style={s.heading}><Text style={s.eyebrow}>SPEEDZONE</Text><Text numberOfLines={1} style={s.title}>{title}</Text></View>
+  return <ScreenHeader title={title} leading={<View style={s.mark}><StoreIcon name="lightning-bolt-circle" size={27} color={colors.hero} /></View>}>
     <Pressable accessibilityRole="button" accessibilityLabel={mode === 'dark' ? 'Ativar tema claro' : 'Ativar tema escuro'} onPress={() => setPreference(mode === 'dark' ? 'light' : 'dark')} style={s.action}><StoreIcon name={mode === 'dark' ? 'white-balance-sunny' : 'moon-waning-crescent'} color={colors.text} size={21} /></Pressable>
     <NotificationBell />
     <Pressable accessibilityRole="button" accessibilityLabel={`Carrinho, ${count} itens`} onPress={() => router.navigate('/(main)/cart')} style={s.action}><StoreIcon name="shopping-outline" color={colors.text} />{count > 0 && <View style={s.badge}><Text style={s.badgeText}>{count}</Text></View>}</Pressable>
-  </View></View>;
+  </ScreenHeader>;
 }
 const createStyles = (c: ThemeColors) => StyleSheet.create({
   header: { backgroundColor: c.background }, inner: { width: '100%', maxWidth: 600, alignSelf: 'center', minHeight: 80, paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', gap: 10 },

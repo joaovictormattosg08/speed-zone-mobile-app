@@ -1,3 +1,4 @@
+import { ScreenHeader } from '../components/ScreenHeader';
 import { AdminThemeToggle } from '../components/AdminThemeToggle';
 import { AdminNavigation } from '../components/AdminNavigation';
 import { useCallback, useRef, useState } from 'react';
@@ -84,9 +85,9 @@ export default function AdminCouponsScreen() {
     </View>;
   }
   return <SafeAreaView style={s.safe}>
-    <View style={[s.header,s.row]}><View style={s.mark}><StoreIcon name="ticket-percent-outline"/></View><View style={s.flex}><Text style={s.kicker}>SPEEDZONE NEOBANK</Text><Text style={s.code}>Gestão de Cupons</Text></View>
-      <AdminThemeToggle/><Pressable accessibilityRole="button" accessibilityLabel="Avisos de vencimento" onPress={()=>setAlerts(!alerts)} style={s.tool}><StoreIcon name="information-outline" color={c.text}/>{expiring.length>0&&<View style={s.dot}/>}</Pressable>
-      <Pressable accessibilityRole="button" accessibilityLabel="Minha conta" onPress={()=>router.navigate('/(main)/account')}><PilotAvatar size={36}/></Pressable></View>
+    <ScreenHeader title="Gestão de Cupons" eyebrow="SPEEDZONE ADMIN" leading={<View style={s.mark}><StoreIcon name="ticket-percent-outline"/></View>}><AdminThemeToggle/>
+<Pressable accessibilityRole="button" accessibilityLabel="Avisos de vencimento" onPress={()=>setAlerts(!alerts)} style={s.tool}><StoreIcon name="information-outline" color={c.text}/>{expiring.length>0&&<View style={s.dot}/>}</Pressable>
+<Pressable accessibilityRole="button" accessibilityLabel="Minha conta" onPress={()=>router.navigate('/(main)/account')}><PilotAvatar size={36}/></Pressable></ScreenHeader>
     <FlatList data={visible} keyExtractor={p=>p.code} renderItem={renderCoupon} contentContainerStyle={s.content} refreshing={loading} onRefresh={()=>setRetry(v=>v+1)}
       ListHeaderComponent={<View style={s.stack}>
         {alerts&&<Text style={s.body}>{expiring.length?'Vencem nos próximos 7 dias: '+expiring.map(p=>p.code).join(', '):'Nenhum cupom vence nos próximos 7 dias.'}</Text>}

@@ -1,3 +1,4 @@
+import { ScreenHeader } from './ScreenHeader';
 import { AdminThemeToggle } from './AdminThemeToggle';
 import { useTheme, useThemedStyles } from '../theme/ThemeContext';
 import { PropsWithChildren, ReactNode } from 'react';
@@ -11,7 +12,7 @@ export function AdminDetail({ title, back, children, footer, busy = false }: Pro
   const s = useThemedStyles(createPs);
 
   return <SafeAreaView style={s.safe}>
-    <View style={[s.header, { gap: 12 }]}><ProductAction label="←" disabled={busy} onPress={() => router.replace(back)} /><View style={s.flex}><Text style={s.eyebrow}>SPEEDZONE // ADMIN</Text><Text style={s.section}>{title}</Text></View><AdminThemeToggle/></View>
+    <ScreenHeader title={title} eyebrow="SPEEDZONE ADMIN" leading={<ProductAction label="←" disabled={busy} onPress={() => router.replace(back)} />}><AdminThemeToggle/></ScreenHeader>
     <KeyboardAvoidingView style={s.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={s.content}>{children}</ScrollView>
       {footer && <View style={[s.footer, { width: '100%', maxWidth: 760, alignSelf: 'center' }]}>{footer}</View>}

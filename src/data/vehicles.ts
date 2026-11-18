@@ -139,6 +139,20 @@ const searchIndex = vehiclePresets.map(vehicle => {
   };
 });
 
+// One suggestion per brand/model; never guess specifications across generations.
+const modelSuggestions = new Map<string, VehiclePreset>();
+const modelKey = (vehicle: VehiclePreset) => normalized(vehicle.brand + ' ' + vehicle.model);
+for (const vehicle of vehiclePresets) {
+  const key = modelKey(vehicle);
+  const existing = modelSuggestions.get(key);
+  if (!existing) {
+    modelSuggestions.set(key, { ...vehicle, id: slug(key), generation: '', years: '' });
+  } else {
+    if (existing.engine !== vehicle.engine) existing.engine = '';
+    if (existing.stockPower !== vehicle.stockPower) existing.stockPower = '';
+  }
+}
+
 export function searchVehiclePresets(query: string, limit = 8) {
   const terms = normalized(query).trim().split(/\s+/).filter(Boolean);
   if (!terms.length || limit <= 0) return [];
@@ -153,5 +167,11 @@ export function searchVehiclePresets(query: string, limit = 8) {
     }
     return [{ vehicle, score }];
   });
-  return matches.sort((a, b) => b.score - a.score).slice(0, limit).map(match => match.vehicle);
+  const unique = new Map<string, VehiclePreset>();
+  for (const { vehicle } of matches.sort((a, b) => b.score - a.score)) {
+    const key = modelKey(vehicle);
+    if (!unique.has(key)) unique.set(key, modelSuggestions.get(key)!);
+    if (unique.size >= limit) break;
+  }
+  return [...unique.values()];
 }

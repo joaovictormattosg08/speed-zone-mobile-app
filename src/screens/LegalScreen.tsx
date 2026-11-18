@@ -1,3 +1,4 @@
+import { ScreenHeader } from '../components/ScreenHeader';
 import { ThemeColors , fonts as f } from '../theme/tokens';
 import { useThemedStyles } from '../theme/ThemeContext';
 import { router } from 'expo-router';
@@ -18,10 +19,7 @@ export default function LegalScreen({ document }: { document: LegalDocument }) {
     else router.replace(user ? '/(main)/account' : '/');
   }
   return <SafeAreaView style={s.safe}>
-    <View style={s.header}>
-      <Pressable accessibilityRole="button" accessibilityLabel="Voltar" onPress={goBack} style={s.back}><StoreIcon name="arrow-left" /></Pressable>
-      <Text style={s.brand}>SPEEDZONE</Text>
-    </View>
+    <ScreenHeader title={content.title} leading={<Pressable accessibilityRole="button" accessibilityLabel="Voltar" onPress={goBack} style={s.back}><StoreIcon name="arrow-left" /></Pressable>}></ScreenHeader>
     <ScrollView contentContainerStyle={s.content}>
       <Text accessibilityRole="header" style={s.title}>{content.title}</Text>
       <Text style={s.body}>{content.description}</Text>

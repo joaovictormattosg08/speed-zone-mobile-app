@@ -1,3 +1,4 @@
+import { ScreenHeader } from '../components/ScreenHeader';
 import { AdminThemeToggle } from '../components/AdminThemeToggle';
 import { StoreIcon } from '../components/StoreHeader';
 import { PilotAvatar } from '../components/PilotAvatar';
@@ -45,10 +46,8 @@ export default function AdminProductsScreen() {
   }
   async function archive() { if (!selected || busy) return; setBusy(true); try { await productRequest('/admin/products/' + selected.id, 'PATCH', { revision: selected.revision, archived: true }); setSelected(null); setRevision(v => v + 1); await refresh(); } catch (e) { setError((e as Error).message); } finally { setBusy(false); } }
   return <SafeAreaView style={s.safe}>
-    <View style={ui.header}><View style={ui.brand}><StoreIcon name="tune" color={c.onPrimary} size={20}/></View>
-      <View style={s.flex}><Text style={s.eyebrow}>SPEEDZONE OPS</Text><Text style={ui.title}>Catálogo &amp; Estoque Admin</Text></View>
-      <AdminThemeToggle/><PilotAvatar size={32}/>
-    </View>
+    <ScreenHeader title="Catálogo & Estoque" eyebrow="SPEEDZONE ADMIN" leading={<View style={ui.brand}><StoreIcon name="tune" color={c.onPrimary} size={20}/></View>}><AdminThemeToggle/>
+<PilotAvatar size={32}/></ScreenHeader>
     <FlatList data={filtered} keyExtractor={p=>p.id} contentContainerStyle={ui.list} refreshing={loading} onRefresh={()=>setRevision(v=>v+1)}
       ListHeaderComponent={<View style={{gap:14}}>
         <View style={ui.toolbar}>

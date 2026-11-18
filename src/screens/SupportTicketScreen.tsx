@@ -1,3 +1,4 @@
+import { ScreenHeader } from '../components/ScreenHeader';
 import { ThemeColors , fonts as f } from '../theme/tokens';
 import { useTheme, useThemedStyles } from '../theme/ThemeContext';
 
@@ -45,11 +46,7 @@ export default function SupportTicketScreen({ id }: { id: string }) {
   const back = () => router.canGoBack() ? router.back() : router.replace('/support');
   const date = (value: string) => new Date(value).toLocaleString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
   return <SafeAreaView style={s.safe}>
-    <View style={s.header}>
-      <Pressable accessibilityRole="button" accessibilityLabel="Voltar à Central de Suporte" onPress={back} style={s.icon}><StoreIcon name="chevron-left" color={c.text} /></Pressable>
-      <View style={{ flex: 1 }}><Text style={s.small}>CHAMADO TÉCNICO</Text><Text style={s.title}>Detalhes do chamado</Text></View>
-      <PilotAvatar size={36} />
-    </View>
+    <ScreenHeader title="Detalhes do chamado" leading={<Pressable accessibilityRole="button" accessibilityLabel="Voltar à Central de Suporte" onPress={back} style={s.icon}><StoreIcon name="chevron-left" color={c.text} /></Pressable>}><PilotAvatar size={36} /></ScreenHeader>
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={s.content}>
         {loading ? <ActivityIndicator color={c.primary} /> : ticket ? <>

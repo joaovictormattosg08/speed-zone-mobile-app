@@ -1,3 +1,4 @@
+import { ScreenHeader } from '../components/ScreenHeader';
 import { AdminThemeToggle } from '../components/AdminThemeToggle';
 import { AdminNavigation } from '../components/AdminNavigation';
 import { useTheme, useThemedStyles } from '../theme/ThemeContext';
@@ -74,10 +75,9 @@ export default function AdminUsersScreen() {
     </View>;
   }
   return <SafeAreaView style={s.safe}>
-    <View style={[ui.header,ui.row,compact&&{flexWrap:'wrap'}]}><View style={ui.icon}><StoreIcon name="shield-account-outline"/></View><View style={[ui.flex,compact&&{minWidth:130}]}><Text style={ui.kicker}>SPEEDZONE HQ</Text><Text style={ui.title}>Usuários &amp; Permissões</Text></View>
-      <AdminThemeToggle/><Pressable accessibilityRole="button" accessibilityLabel="Avisos de contas" onPress={()=>setAlerts(!alerts)} style={ui.tool}><StoreIcon name="information-outline" color={c.text} size={18}/></Pressable>
-      <Pressable accessibilityRole="button" onPress={()=>open(null,'new')} style={[ui.primary,ui.row]}><StoreIcon name="plus" color={c.onPrimary} size={16}/><Text style={ui.primaryText}>Convidar</Text></Pressable>
-    </View>
+    <ScreenHeader title="Usuários & Permissões" eyebrow="SPEEDZONE ADMIN"><AdminThemeToggle/>
+<Pressable accessibilityRole="button" accessibilityLabel="Avisos de contas" onPress={()=>setAlerts(!alerts)} style={ui.tool}><StoreIcon name="information-outline" color={c.text} size={18}/></Pressable>
+<Pressable accessibilityRole="button" accessibilityLabel="Convidar usuário" onPress={()=>open(null,'new')} style={[ui.primary,{width:44,minHeight:44,paddingHorizontal:0}]}><StoreIcon name="account-plus-outline" color={c.onPrimary} size={22}/></Pressable></ScreenHeader>
     <FlatList data={visible} keyExtractor={u=>u.id} renderItem={renderUser} refreshing={loading} onRefresh={()=>setRevision(v=>v+1)} contentContainerStyle={ui.content}
       ListHeaderComponent={<View style={ui.stack}>
         {alerts&&<Text style={s.body}>{users.filter(u=>u.blocked&&!u.archived).length} contas bloqueadas • {users.filter(u=>u.archived).length} contas desativadas</Text>}

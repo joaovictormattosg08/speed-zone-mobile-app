@@ -1,3 +1,4 @@
+import { ScreenHeader } from '../components/ScreenHeader';
 import { NotificationBell } from '../components/NotificationBell';
 import { ThemeColors , fonts as f } from '../theme/tokens';
 import { useTheme, useThemedStyles } from '../theme/ThemeContext';
@@ -81,7 +82,7 @@ export default function SupportScreen({ orderId }: { orderId?: string }) {
   const activeTickets = tickets.filter(ticket => ticket.status === 'open');
   const sortedTickets = [...tickets].sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt));
   const visibleTickets = showHistory ? sortedTickets : sortedTickets.slice(0, 1);
-  return <SafeAreaView edges={['top', 'left', 'right']} style={s.safe}><View style={s.header}><Pressable accessibilityRole="button" accessibilityLabel="Voltar para Conta" onPress={() => router.canGoBack() ? router.back() : router.replace('/(main)/account')} style={s.icon}><StoreIcon name="arrow-left" color={c.text} /></Pressable><View style={s.grow}><Text style={s.section}>Central de Atendimento</Text><Text style={s.small}>SpeedZone Box</Text></View><NotificationBell /></View>
+  return <SafeAreaView edges={['top', 'left', 'right']} style={s.safe}><ScreenHeader title="Central de Atendimento" leading={<Pressable accessibilityRole="button" accessibilityLabel="Voltar para Conta" onPress={() => router.canGoBack() ? router.back() : router.replace('/(main)/account')} style={s.icon}><StoreIcon name="arrow-left" color={c.text} /></Pressable>}><NotificationBell /></ScreenHeader>
   <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}><ScrollView ref={scroll} keyboardShouldPersistTaps="handled" contentContainerStyle={s.content}>
     <View><Text style={s.title}>Suporte Técnico &amp; Box</Text><Text style={s.body}>Assistência técnica especializada para pilotos SpeedZone.</Text></View>
     <View style={s.card}>

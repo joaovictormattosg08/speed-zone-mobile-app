@@ -65,7 +65,7 @@ export default function CheckoutScreen() {
     } catch (cause) { setError((cause as Error).message); }
     finally { lock.current = false; setBusy(false); }
   }
-  return <SafeAreaView style={s.safe}><CheckoutHeader title="CHECKOUT" onBack={() => { if (busy) return; if (step > 1) { setStep(step - 1); setError(''); } else router.navigate('/(main)/cart'); }} /><KeyboardAvoidingView style={s.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}><ScrollView ref={scroll} keyboardShouldPersistTaps="handled" contentContainerStyle={s.content}>
+  return <SafeAreaView style={s.safe}><CheckoutHeader title="Checkout" onBack={() => { if (busy) return; if (step > 1) { setStep(step - 1); setError(''); } else router.navigate('/(main)/cart'); }} /><KeyboardAvoidingView style={s.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}><ScrollView ref={scroll} keyboardShouldPersistTaps="handled" contentContainerStyle={s.content}>
     <CatalogStatus/>
     {unavailable&&<Text style={s.error}>Há peças indisponíveis. Volte ao carrinho para revisar.</Text>}
     <View style={[s.card, s.row]}>{['Carrinho', 'Entrega', 'Pagamento', 'Revisão'].map((label, index) => <View key={label} style={s.step}><View style={[s.stepIcon, index <= step && s.active]}><Text style={s.stepNumber}>{index < step ? '✓' : index + 1}</Text></View><Text style={[s.micro, index === step && s.green]}>{label.toUpperCase()}</Text></View>)}</View>

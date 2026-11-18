@@ -1,3 +1,4 @@
+import { ScreenHeader } from '../components/ScreenHeader';
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Href, router } from 'expo-router';
@@ -8,9 +9,7 @@ import { StoreIcon } from '../components/StoreHeader';
 export default function NotificationsScreen() {
   const { colors: c } = useTheme();
   const { items, loading, error, refresh, markRead } = useNotifications();
-  return <SafeAreaView style={{ flex: 1, backgroundColor: c.background }}><View style={{ flexDirection: 'row', alignItems: 'center', padding: 16, gap: 14 }}>
-    <Pressable accessibilityRole="button" accessibilityLabel="Voltar" onPress={() => router.canGoBack() ? router.back() : router.replace('/(main)/catalog')} style={{ padding: 12 }}><StoreIcon name="arrow-left" /></Pressable><Text style={{ color: c.text, fontSize: 24, fontWeight: '700', flex: 1 }}>Notificações</Text>
-  </View><ScrollView refreshControl={<RefreshControl refreshing={loading} onRefresh={() => void refresh()} />} contentContainerStyle={{ padding: 20, gap: 12, maxWidth: 600, width: '100%', alignSelf: 'center' }}>
+  return <SafeAreaView style={{ flex: 1, backgroundColor: c.background }}><ScreenHeader title="Notificações" leading={<Pressable accessibilityRole="button" accessibilityLabel="Voltar" onPress={() => router.canGoBack() ? router.back() : router.replace('/(main)/catalog')} style={{ padding: 12 }}><StoreIcon name="arrow-left" /></Pressable>} /><ScrollView refreshControl={<RefreshControl refreshing={loading} onRefresh={() => void refresh()} />} contentContainerStyle={{ padding: 20, gap: 12, maxWidth: 600, width: '100%', alignSelf: 'center' }}>
     <Text style={{ color: c.muted }}>Pedidos, respostas do suporte e reposição das suas peças favoritas.</Text>
     {!!error && <Pressable accessibilityRole="button" onPress={() => void refresh()} style={{ paddingVertical: 14 }}><Text accessibilityRole="alert" style={{ color: c.error }}>{error} Toque para tentar novamente.</Text></Pressable>}
     {loading && <ActivityIndicator color={c.primary} />}

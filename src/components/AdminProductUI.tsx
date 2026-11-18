@@ -1,9 +1,10 @@
+import { ScreenHeader } from './ScreenHeader';
 import { AdminThemeToggle } from './AdminThemeToggle';
 import { ThemeColors , fonts as f } from '../theme/tokens';
 import { useTheme, useThemedStyles } from '../theme/ThemeContext';
 
 import { PropsWithChildren } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text } from 'react-native';
 import { router } from 'expo-router';
 import { AdminNavigation } from './AdminNavigation';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -13,7 +14,8 @@ export function AdminProductShell({ children, footer, title = 'Produtos' }: Prop
 
   const ps = useThemedStyles(createPs);
 
-  return <SafeAreaView style={ps.safe}><View style={ps.header}><Text style={ps.logo}>ϟ SPEED<Text style={ps.green}>ZONE</Text></Text><View style={ps.flex}><Text style={ps.eyebrow}>SPEEDZONE OPS</Text><Text style={ps.title}>{title}</Text></View><AdminThemeToggle/><PilotAvatar/></View>{children}{footer}<AdminNavigation current="/admin-products" onReselect={title === 'Produtos' ? () => router.navigate('/admin-products') : undefined} /></SafeAreaView>;
+  return <SafeAreaView style={ps.safe}><ScreenHeader title={title} eyebrow="SPEEDZONE ADMIN"><AdminThemeToggle/>
+<PilotAvatar/></ScreenHeader>{children}{footer}<AdminNavigation current="/admin-products" onReselect={title === 'Produtos' ? () => router.navigate('/admin-products') : undefined} /></SafeAreaView>;
 }
 export function ProductAction({ label, onPress, primary = false, danger = false, disabled = false }: { label: string; onPress: () => void; primary?: boolean; danger?: boolean; disabled?: boolean }) {
   const { colors: c } = useTheme();

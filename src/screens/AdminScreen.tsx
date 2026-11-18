@@ -1,3 +1,4 @@
+import { ScreenHeader } from '../components/ScreenHeader';
 import { AdminThemeToggle } from '../components/AdminThemeToggle';
 import { AdminNavigation } from '../components/AdminNavigation';
 import { ThemeColors , palette as speedPalette, fonts as f } from '../theme/tokens';
@@ -36,7 +37,8 @@ export default function AdminScreen() {
    {label:'Pilotos',value:data.customers,note:'Contas cadastradas',icon:'account-group-outline',color:c.primary,path:'/admin-users'}
  ] as const : [];
  const alerts = metrics.slice(0,3).filter(metric => typeof metric.value === 'number' && metric.value > 0);
- return <SafeAreaView edges={['top','left','right','bottom']} style={s.safe}><View style={s.header}><View style={s.brandIcon}><StoreIcon name="speedometer" color={c.primary} size={25}/></View><View style={s.grow}><Text style={s.eyebrow}>OPERAÇÕES</Text><Text style={s.title}>SpeedZone Admin</Text></View><AdminThemeToggle/><Pressable accessibilityRole="button" accessibilityLabel="Voltar para Minha Conta" onPress={()=>router.replace('/(main)/account')}><PilotAvatar size={32}/></Pressable></View>
+ return <SafeAreaView edges={['top','left','right','bottom']} style={s.safe}><ScreenHeader title="Painel de operações" eyebrow="SPEEDZONE ADMIN" leading={<View style={s.brandIcon}><StoreIcon name="speedometer" color={c.primary} size={25}/></View>}><AdminThemeToggle/>
+<Pressable accessibilityRole="button" accessibilityLabel="Voltar para Minha Conta" onPress={()=>router.replace('/(main)/account')}><PilotAvatar size={32}/></Pressable></ScreenHeader>
  <ScrollView ref={scroll} refreshControl={<RefreshControl refreshing={loading} onRefresh={()=>setRevision(v=>v+1)} tintColor={c.primary}/>} contentContainerStyle={s.content}>
  {data && <View style={s.panel}>
    <View style={s.between}><Text style={s.title}>Faturamento do dia</Text><Text style={s.status}>{change === null ? 'Sem base ontem' : change.toLocaleString('pt-BR',{style:'percent', maximumFractionDigits:1,signDisplay:'exceptZero'}) + ' vs. ontem'}</Text></View>

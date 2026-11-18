@@ -1,3 +1,4 @@
+import { ScreenHeader } from '../components/ScreenHeader';
 import { AdminThemeToggle } from '../components/AdminThemeToggle';
 import { ThemeColors , fonts as f } from '../theme/tokens';
 import { useTheme, useThemedStyles } from '../theme/ThemeContext';
@@ -45,7 +46,8 @@ export default function AdminSupportScreen() {
     finally{locked.current=false;setBusy(null);}
   }
   const filtered=tickets.filter(ticket=>(filter==='all'||ticket.status===filter)&&(category==='all'||ticket.category===category)&&`${ticket.id} ${ticket.name} ${ticket.email} ${ticket.description} ${ticket.vehicle} ${ticket.orderId||''}`.toLocaleLowerCase('pt-BR').includes(query.trim().toLocaleLowerCase('pt-BR')));
-  return <SafeAreaView style={s.safe}><View style={s.header}><Text style={s.logo}>ϟ SPEED<Text style={s.green}>ZONE</Text></Text><View style={s.flex}><Text style={s.eyebrow}>SPEEDZONE BOX</Text><Text style={s.title}>Central de chamados</Text></View><AdminThemeToggle/><Pressable accessibilityRole="button" accessibilityLabel="Voltar para Minha Conta" onPress={()=>router.replace('/(main)/account')}><PilotAvatar/></Pressable></View>
+  return <SafeAreaView style={s.safe}><ScreenHeader title="Central de chamados" eyebrow="SPEEDZONE ADMIN"><AdminThemeToggle/>
+<Pressable accessibilityRole="button" accessibilityLabel="Voltar para Minha Conta" onPress={()=>router.replace('/(main)/account')}><PilotAvatar/></Pressable></ScreenHeader>
     <KeyboardAvoidingView style={s.flex} behavior={Platform.OS==='ios'?'padding':undefined}><FlatList keyboardShouldPersistTaps="handled" data={filtered} keyExtractor={ticket=>ticket.id} contentContainerStyle={s.content} refreshing={loading} onRefresh={()=>{setLoading(true);void refresh().catch(e=>setError(e.message)).finally(()=>setLoading(false));}}
       ListHeaderComponent={<View style={{gap:16}}>{!!notice&&<View accessibilityLiveRegion="polite" style={s.card}><Text style={s.eyebrow}>✓ OPERAÇÃO CONCLUÍDA</Text><Text style={s.body}>{notice}</Text><ProductAction label="Fechar aviso" onPress={()=>setNotice('')}/></View>}<View style={layout.hero}>
         <View style={s.between}><Text style={s.eyebrow}>CENTRAL DE ATENDIMENTO</Text><StoreIcon name="headset" size={20}/></View>
